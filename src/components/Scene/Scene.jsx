@@ -1,6 +1,6 @@
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
 import * as THREE from 'three'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { CameraControls, PresentationControls } from '@react-three/drei'
 import { VintagePC, ScreenContent } from './VintagePC'
 import { useWindowStore } from '../../stores/windowStore'
@@ -22,12 +22,72 @@ const CAMERA = {
 // caméra à z = 0.27 + 1.3 = 1.57 → devant le clavier, écran visible.
 const FOCUS_DISTANCE      = 1.3
 const TRANSITION_DURATION = 1.4   // secondes
+const ARCH_HEIGHT         = 0.8   // unités world — élévation du point de contrôle Bézier
 
 const _screenPos = new THREE.Vector3()
+
+function smoothstep(t) {
+  return t * t * (3 - 2 * t)
+}
+
+// ── CameraRig ─────────────────────────────────────────────────────
+// Anime la caméra le long d'une courbe de Bézier quadratique.
+// Le point de contrôle est surélevé de ARCH_HEIGHT pour éviter
+// de traverser le clavier pendant le zoom.
+const CameraRig = forwardRef(function CameraRig(_, ref) {
+  const { camera } = useThree()
+
+  // État interne de l'animation (pas de state React — pas de re-render)
+  const anim = useRef({
+    active:     false,
+    t:          0,
+    curve:      null,
+    lookAt:     null,
+    onComplete: null,
+  })
+
+  useImperativeHandle(ref, () => ({
+    animateTo(endPos, lookAt, onComplete) {
+      const startPos = camera.position.clone()
+      const ctrlX    = (startPos.x + endPos.x) / 2
+      const ctrlY    = Math.max(startPos.y, endPos.y) + ARCH_HEIGHT
+      const ctrlZ    = (startPos.z + endPos.z) / 2
+
+      anim.current = {
+        active:     true,
+        t:          0,
+        curve:      new THREE.QuadraticBezierCurve3(
+          startPos,
+          new THREE.Vector3(ctrlX, ctrlY, ctrlZ),
+          endPos.clone(),
+        ),
+        lookAt:     lookAt.clone(),
+        onComplete: onComplete ?? null,
+      }
+    },
+  }))
+
+  useFrame((_, delta) => {
+    const s = anim.current
+    if (!s.active) return
+
+    s.t = Math.min(s.t + delta / TRANSITION_DURATION, 1)
+    camera.position.copy(s.curve.getPoint(smoothstep(s.t)))
+    camera.lookAt(s.lookAt)
+
+    if (s.t >= 1) {
+      s.active = false
+      s.onComplete?.()
+    }
+  })
+
+  return null
+})
 
 // ── Scene ─────────────────────────────────────────────────────────
 export function Scene() {
   const cameraControlsRef = useRef(null)
+  const cameraRigRef      = useRef(null)
   const [isFocused, setIsFocused] = useState(false)
   const [isReady,   setIsReady]   = useState(false)
 
@@ -120,6 +180,9 @@ export function Scene() {
 
         {/* ScreenContent HORS de PresentationControls — élimine la double-transformation */}
         <ScreenContent isFocused={isFocused} />
+
+        {/* ── CameraRig : animation Bézier sans collision ── */}
+        <CameraRig ref={cameraRigRef} />
 
         <CameraControls
           ref={cameraControlsRef}

@@ -51,19 +51,19 @@ const _q      = new THREE.Quaternion()
 const _wScale = new THREE.Vector3()
 
 // ── ScreenContent ─────────────────────────────────────────────────
-// Technique identique à CSS3DBridge — le group est mis à jour
-// CHAQUE FRAME en impératif (pas de useState = pas de re-render).
-// Html transform hérite du matrixWorld du groupe parent.
+// Positionné à la RACINE du Canvas (hors de PresentationControls)
+// pour éviter la double-transformation. Chaque frame, getWorldPosition()
+// lit la position world résolue du mesh-écran et la copie impérativement
+// sur le groupe parent du Html (pas de useState = pas de re-render).
 //
 // Layout dans la scène :
-//   PresentationControls.group
-//     └── VintagePC
-//           ├── primitive (GLB, scale 0.209)
-//           ├── pointLight (ref, position synchro chaque frame)
-//           └── group (ref, position+rotation+scale = screen mesh)
-//                 └── Html transform   ← OS React
-//
-// La hiérarchie garantit que tout tourne ensemble avec PresentationControls.
+//   Canvas root
+//     ├── PresentationControls.group
+//     │     └── VintagePC (primitive GLB + mesh-écran)
+//     └── ScreenContent           ← hors du group PresentationControls
+//           ├── pointLight (impératif, devant l'écran)
+//           └── group (impératif, position+rotation+scale = mesh-écran)
+//                 └── Html transform  ← OS React
 export function ScreenContent({ isFocused }) {
   const screenRef      = useWindowStore((s) => s.screenRef)
   const setScreenCenter = useWindowStore((s) => s.setScreenCenter)

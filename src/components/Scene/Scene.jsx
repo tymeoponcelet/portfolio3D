@@ -88,18 +88,17 @@ const CameraRig = forwardRef(function CameraRig(_, ref) {
 export function Scene() {
   const cameraControlsRef = useRef(null)
   const cameraRigRef      = useRef(null)
-  const [isFocused, setIsFocused] = useState(false)
-  const [isReady,   setIsReady]   = useState(false)
+  const [isFocused,   setIsFocused]   = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
+  const [isReady,     setIsReady]     = useState(false)
 
   // ── Zoom vers l'écran ─────────────────────────────────────────
   // Utilise screenCenter (bbox center) — même point que le Html overlay.
   // Si screenCenter n'est pas encore calculé, fallback sur bounding box live.
   const zoomToScreen = useCallback(() => {
-    const cc = cameraControlsRef.current
-    if (!cc) return
+    const rig = cameraRigRef.current
+    if (!rig) return
 
-    // screenCenter = position calculée par ScreenContent (getWorldPosition)
-    // → même référence que le Html overlay, zoom parfaitement centré.
     const { screenRef, screenCenter: sc } = useWindowStore.getState()
     let cx, cy, cz
 
@@ -110,24 +109,39 @@ export function Scene() {
       cx = _screenPos.x; cy = _screenPos.y; cz = _screenPos.z
     } else {
       const { position: p, target: t } = CAMERA.focused
-      cc.setLookAt(p[0], p[1], p[2], t[0], t[1], t[2], true)
-      setIsFocused(true)
-      return
+      cx = t[0]; cy = t[1]; cz = t[2]
     }
 
-    // Caméra à FOCUS_DISTANCE devant l'écran, regardant droit dans l'axe Z.
-    // Pas d'offset Y : l'écran doit être centré dans le viewport.
-    cc.setLookAt(cx, cy, cz + FOCUS_DISTANCE, cx, cy, cz, true)
-    setIsFocused(true)
+    const endPos  = new THREE.Vector3(cx, cy, cz + FOCUS_DISTANCE)
+    const lookAt  = new THREE.Vector3(cx, cy, cz)
+
+    setIsAnimating(true)
+    rig.animateTo(endPos, lookAt, () => {
+      // Synchroniser CameraControls sur la position finale (sans transition)
+      // pour éviter un snap au relâchement
+      const cc = cameraControlsRef.current
+      if (cc) cc.setLookAt(endPos.x, endPos.y, endPos.z, cx, cy, cz, false)
+      setIsAnimating(false)
+      setIsFocused(true)
+    })
   }, [])
 
   // ── Zoom arrière ──────────────────────────────────────────────
   const zoomOut = useCallback(() => {
-    const cc = cameraControlsRef.current
-    if (!cc) return
+    const rig = cameraRigRef.current
+    if (!rig) return
+
     const { position: p, target: t } = CAMERA.overview
-    cc.setLookAt(p[0], p[1], p[2], t[0], t[1], t[2], true)
-    setIsFocused(false)
+    const endPos = new THREE.Vector3(p[0], p[1], p[2])
+    const lookAt = new THREE.Vector3(t[0], t[1], t[2])
+
+    setIsAnimating(true)
+    rig.animateTo(endPos, lookAt, () => {
+      const cc = cameraControlsRef.current
+      if (cc) cc.setLookAt(p[0], p[1], p[2], t[0], t[1], t[2], false)
+      setIsAnimating(false)
+      setIsFocused(false)
+    })
   }, [])
 
   // ── Escape pour quitter le mode focused ───────────────────────
@@ -172,7 +186,7 @@ export function Scene() {
           polar={[-0.15, 0.15]}
           azimuth={[-0.4, 0.4]}
           config={{ mass: 2, tension: 500 }}
-          enabled={!isFocused}
+          enabled={!isFocused && !isAnimating}
           snap
         >
           <VintagePC onMonitorClick={zoomToScreen} />
@@ -186,7 +200,7 @@ export function Scene() {
 
         <CameraControls
           ref={cameraControlsRef}
-          enabled={!isFocused}
+          enabled={!isFocused && !isAnimating}
           makeDefault
           smoothTime={TRANSITION_DURATION}
           draggingSmoothTime={0.08}

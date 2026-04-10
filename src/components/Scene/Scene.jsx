@@ -65,7 +65,7 @@ const CameraRig = forwardRef(function CameraRig(_, ref) {
         onComplete: onComplete ?? null,
       }
     },
-  }))
+  }), [])
 
   useFrame((_, delta) => {
     const s = anim.current
@@ -91,13 +91,19 @@ export function Scene() {
   const [isFocused,   setIsFocused]   = useState(false)
   const [isAnimating, setIsAnimating] = useState(false)
   const [isReady,     setIsReady]     = useState(false)
+  const isAnimatingRef = useRef(false)
+
+  const setAnimating = useCallback((v) => {
+    isAnimatingRef.current = v
+    setIsAnimating(v)
+  }, [])
 
   // ── Zoom vers l'écran ─────────────────────────────────────────
   // Utilise screenCenter (bbox center) — même point que le Html overlay.
   // Si screenCenter n'est pas encore calculé, fallback sur bounding box live.
   const zoomToScreen = useCallback(() => {
     const rig = cameraRigRef.current
-    if (!rig) return
+    if (!rig || isAnimatingRef.current) return
 
     const { screenRef, screenCenter: sc } = useWindowStore.getState()
     let cx, cy, cz
@@ -115,34 +121,34 @@ export function Scene() {
     const endPos  = new THREE.Vector3(cx, cy, cz + FOCUS_DISTANCE)
     const lookAt  = new THREE.Vector3(cx, cy, cz)
 
-    setIsAnimating(true)
+    setAnimating(true)
     rig.animateTo(endPos, lookAt, () => {
       // Synchroniser CameraControls sur la position finale (sans transition)
       // pour éviter un snap au relâchement
       const cc = cameraControlsRef.current
       if (cc) cc.setLookAt(endPos.x, endPos.y, endPos.z, cx, cy, cz, false)
-      setIsAnimating(false)
+      setAnimating(false)
       setIsFocused(true)
     })
-  }, [])
+  }, [setAnimating])
 
   // ── Zoom arrière ──────────────────────────────────────────────
   const zoomOut = useCallback(() => {
     const rig = cameraRigRef.current
-    if (!rig) return
+    if (!rig || isAnimatingRef.current) return
 
     const { position: p, target: t } = CAMERA.overview
     const endPos = new THREE.Vector3(p[0], p[1], p[2])
     const lookAt = new THREE.Vector3(t[0], t[1], t[2])
 
-    setIsAnimating(true)
+    setAnimating(true)
     rig.animateTo(endPos, lookAt, () => {
       const cc = cameraControlsRef.current
       if (cc) cc.setLookAt(p[0], p[1], p[2], t[0], t[1], t[2], false)
-      setIsAnimating(false)
+      setAnimating(false)
       setIsFocused(false)
     })
-  }, [])
+  }, [setAnimating])
 
   // ── Escape pour quitter le mode focused ───────────────────────
   useEffect(() => {
@@ -229,7 +235,7 @@ export function Scene() {
       )}
 
       {/* ── Bouton Retour ── */}
-      {isFocused && (
+      {isFocused && !isAnimating && (
         <button
           onClick={zoomOut}
           style={{

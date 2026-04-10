@@ -101,6 +101,8 @@ export function Scene() {
   // ── Zoom vers l'écran ─────────────────────────────────────────
   // Utilise screenCenter (bbox center) — même point que le Html overlay.
   // Si screenCenter n'est pas encore calculé, fallback sur bounding box live.
+  // Note : PresentationControls.enabled=false bloque le drag mais PAS les
+  // clics Three.js — le guard isAnimatingRef.current protège contre la re-entrée.
   const zoomToScreen = useCallback(() => {
     const rig = cameraRigRef.current
     if (!rig || isAnimatingRef.current) return

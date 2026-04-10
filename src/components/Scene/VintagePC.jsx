@@ -164,7 +164,7 @@ function ScreenContent({ isFocused }) {
 }
 
 // ── VintagePC ────────────────────────────────────────────────────
-export function VintagePC({ onMonitorClick, isFocused }) {
+export function VintagePC({ onMonitorClick }) {
   const { scene } = useGLTF('/models/vintage_pc.glb')
   const fallbackRef  = useRef()
   const setScreenRef = useWindowStore((s) => s.setScreenRef)
@@ -210,8 +210,6 @@ export function VintagePC({ onMonitorClick, isFocused }) {
         <planeGeometry args={[SCREEN_WORLD_W, SCREEN_WORLD_H]} />
         <meshBasicMaterial />
       </mesh>
-
-      <ScreenContent isFocused={isFocused} />
     </>
   )
 }

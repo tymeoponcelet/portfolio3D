@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/TYM/Desktop/site old pc - Copie/portfolio-3d/**)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

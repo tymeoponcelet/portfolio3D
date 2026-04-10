@@ -64,7 +64,7 @@ const _wScale = new THREE.Vector3()
 //                 └── Html transform   ← OS React
 //
 // La hiérarchie garantit que tout tourne ensemble avec PresentationControls.
-function ScreenContent({ isFocused }) {
+export function ScreenContent({ isFocused }) {
   const screenRef      = useWindowStore((s) => s.screenRef)
   const setScreenCenter = useWindowStore((s) => s.setScreenCenter)
 

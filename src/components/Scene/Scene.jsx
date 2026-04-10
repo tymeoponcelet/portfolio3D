@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import * as THREE from 'three'
 import { Canvas } from '@react-three/fiber'
 import { CameraControls, PresentationControls } from '@react-three/drei'
-import { VintagePC } from './VintagePC'
+import { VintagePC, ScreenContent } from './VintagePC'
 import { useWindowStore } from '../../stores/windowStore'
 
 // ── Positions caméra ──────────────────────────────────────────────
@@ -117,6 +117,9 @@ export function Scene() {
         >
           <VintagePC onMonitorClick={zoomToScreen} />
         </PresentationControls>
+
+        {/* ScreenContent HORS de PresentationControls — élimine la double-transformation */}
+        <ScreenContent isFocused={isFocused} />
 
         <CameraControls
           ref={cameraControlsRef}

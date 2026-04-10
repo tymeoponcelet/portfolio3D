@@ -115,7 +115,7 @@ export function Scene() {
           enabled={!isFocused}
           snap
         >
-          <VintagePC onMonitorClick={zoomToScreen} isFocused={isFocused} />
+          <VintagePC onMonitorClick={zoomToScreen} />
         </PresentationControls>
 
         <CameraControls

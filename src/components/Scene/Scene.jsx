@@ -65,6 +65,8 @@ const CameraRig = forwardRef(function CameraRig(_, ref) {
         onComplete: onComplete ?? null,
       }
     },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // camera (useThree) et anim (useRef) sont des références stables — deps vide correct.
   }), [])
 
   useFrame((_, delta) => {
@@ -220,7 +222,7 @@ export function Scene() {
       </Canvas>
 
       {/* ── Hint ── */}
-      {isReady && !isFocused && (
+      {isReady && !isFocused && !isAnimating && (
         <div style={{
           position:      'absolute',
           bottom:        32,

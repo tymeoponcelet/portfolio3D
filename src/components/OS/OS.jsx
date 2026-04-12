@@ -55,6 +55,7 @@ function PortfolioWindow() {
   return (
     <motion.div
       className="win95-window"
+      data-active="true"
       style={{
         position: 'absolute',
         inset: 6,
@@ -66,11 +67,11 @@ function PortfolioWindow() {
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.15, ease: 'easeOut' }}
     >
-      {/* Titlebar */}
+      {/* Titlebar — toujours active (fenêtre unique de l'OS) */}
       <div className="win95-titlebar" style={{ cursor: 'default', flexShrink: 0 }}>
         <div className="win95-title-left">
           <span className="win95-title-icon">💻</span>
-          <span>Tyméo Poncelet — Portfolio</span>
+          <span className="win95-title-text">Tyméo Poncelet — Portfolio</span>
         </div>
         <div className="win95-controls">
           <button className="win95-ctrl-btn" title="Réduire"   onPointerDown={(e) => e.stopPropagation()}>─</button>
@@ -94,7 +95,11 @@ export function OS() {
   const handleBooted = useCallback(() => setBooted(true), [])
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', background: 'var(--w-teal)' }}>
+    <div
+      className="win95-crt-root"
+      data-theme="retro-light"
+      style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', background: 'var(--w-teal)' }}
+    >
       {/* Scanlines CRT */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 9999,

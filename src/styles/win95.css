@@ -1,3 +1,7 @@
+/* Tailwind v4 — les utilities (@layer utilities) sont toujours
+   écrasées par nos styles non-layered ci-dessous si conflit.     */
+@import "tailwindcss";
+
 /* ═══════════════════════════════════════════════════════════════
    WIN95 DESIGN SYSTEM — Heffernan-accurate + Retro-Light/Dark
    Source audit : os.henryheffernan.com (Puppeteer, 2026-04-12)
@@ -706,4 +710,102 @@
   border-top: 1px solid var(--w-dark);
   border-bottom: 1px solid var(--w-white);
   margin: 4px 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TEXTURE GRAIN — Simule la texture plastique du boîtier CRT
+   Technique : SVG feTurbulence tuilé 200 × 200 px
+   S'applique uniquement sur la surface argentée (pas sur .win95-body
+   car le blanc couvre naturellement le grain via mix-blend-mode overlay)
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-grain {
+  /* Crée un stacking context propre : le ::after reste confiné */
+  isolation: isolate;
+}
+
+.win95-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;        /* tous les clics traversent le grain    */
+  z-index: 9998;               /* au-dessus du contenu, sous les scanlines */
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  /* overlay : amplifie les zones claires et sombres du silver → texture plastique */
+  mix-blend-mode: overlay;
+  /* Empêche le grain de dépasser les bords arrondis de la fenêtre */
+  border-radius: inherit;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LUCIDE ICONS — Filtre rétro bitmap
+   Réduit la saturation et augmente le contraste pour imiter
+   les icônes Win95 scannées/compressées en 256 couleurs.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Icônes des boutons titlebar (Minus / Square / X) */
+.win95-ctrl-btn svg {
+  display: block;
+  flex-shrink: 0;
+  /* Contraste fort + légère désaturation = look bitmap Win95 */
+  filter: contrast(1.2) brightness(0.85);
+}
+
+/* Hover & active : maintenir la lisibilité */
+.win95-ctrl-btn:hover svg,
+.win95-ctrl-btn:active svg {
+  filter: contrast(1.3) brightness(0.75);
+}
+
+.win95-ctrl-btn--close:hover svg {
+  filter: contrast(1.4) brightness(1.1) saturate(0);
+}
+
+/* Icônes bureau Lucide (FileText / FolderOpen / Settings2 / Mail) */
+.win95-icon-lucide {
+  /* Simule une icône 32×32 compressée en BMP 256 couleurs :
+     fort contraste, saturation réduite, légère brunâtre */
+  filter: contrast(1.15) saturate(0.65) brightness(0.88) sepia(0.15);
+  display: block;
+}
+
+/* Sélection : icône inversée (style Win95 authentique) */
+.win95-icon.selected .win95-icon-lucide,
+.win95-icon:hover    .win95-icon-lucide {
+  filter: contrast(1.1) saturate(0.4) brightness(1.15) invert(0.08);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DESKTOP — Atmosphère CRT renforcée
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Vignettage subtil sur le bureau (effet CRT) */
+.win95-desktop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99997;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(0, 0, 0, 0.18) 100%
+  );
+}
+
+/* Taskbar : ombre portée douce au-dessus (séparation profondeur) */
+.win95-taskbar::before {
+  content: '';
+  position: absolute;
+  top: -6px; left: 0; right: 0;
+  height: 6px;
+  background: linear-gradient(to top, rgba(0,0,0,0.2), transparent);
+  pointer-events: none;
+}
+
+/* Animation d'entrée des boutons taskbar (layout Framer) */
+.win95-task-btn {
+  transition: background 0.06s, border-color 0.06s;
 }

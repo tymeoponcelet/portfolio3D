@@ -1,216 +1,226 @@
-import { useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useGLTF, Html } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useWindowStore } from '../../stores/windowStore'
+import { ScreenContent } from '../OS/ScreenContent'
 import { OS } from '../OS/OS'
 import {
-  SCREEN_WORLD_W,
-  SCREEN_WORLD_H,
-  SCREEN_MESH_NAME,
   PC_MODEL_SCALE,
   DEBUG_HIGHLIGHT_SCREEN,
   DOM_W,
   DOM_H,
-  SCALE_FACTOR,
 } from '../../constants/screen'
 
-// ── Détection du mesh-écran ───────────────────────────────────────
-const _wb = new THREE.Box3()
-const _ws = new THREE.Vector3()
+// ── Détection du mesh-écran (fallback uniquement) ────────────────────
+// Utilisée seulement si nodes.Object_19 est absent (modèle différent).
+const _b = new THREE.Box3()
+const _s = new THREE.Vector3()
 
 function detectScreenMesh(scene) {
-  if (SCREEN_MESH_NAME) {
-    let found = null
-    scene.traverse((obj) => { if (obj.isMesh && obj.name === SCREEN_MESH_NAME) found = obj })
-    if (found) return found
-    console.warn(`[VintagePC] SCREEN_MESH_NAME="${SCREEN_MESH_NAME}" introuvable`)
+  if (DEBUG_HIGHLIGHT_SCREEN) {
+    console.group('[VintagePC] mesh dump (fallback detection)')
+    scene.traverse((obj) => {
+      if (!obj.isMesh) return
+      _b.setFromObject(obj); _b.getSize(_s)
+      const [d1, d2, d3] = [_s.x, _s.y, _s.z].sort((a, b) => b - a)
+      const ctr = new THREE.Vector3(); _b.getCenter(ctr)
+      console.log(
+        `"${obj.name}" mat="${obj.material?.name}"` +
+        ` ${d1.toFixed(3)}×${d2.toFixed(3)}×${d3.toFixed(3)}` +
+        ` flat=${(d3/d1).toFixed(3)}` +
+        ` ctr=(${ctr.x.toFixed(3)},${ctr.y.toFixed(3)},${ctr.z.toFixed(3)})`
+      )
+    })
+    console.groupEnd()
   }
-  const candidates = []
+
+  const SCREEN_KW  = ['screen', 'monitor', 'crt', 'display', 'glass', 'tube']
+  const EXCLUDE_KW = ['keyboard', 'vent', 'plug']
+  const MAX_SIZE   = 1.5   // world units
+
+  let best = null, bestScore = Infinity
+
   scene.traverse((obj) => {
     if (!obj.isMesh) return
-    _wb.setFromObject(obj); _wb.getSize(_ws)
-    const [d1, d2, d3] = [_ws.x, _ws.y, _ws.z].sort((a, b) => b - a)
-    if (Math.max(d1, d2, d3) < 0.01) return
-    const flat = d3 / d1
-    if (flat >= 0.20) return
-    const aspect     = d1 / d2
-    const flatScore  = 1 - flat / 0.20
-    const aspectDiff = Math.min(Math.abs(aspect - 1.333), Math.abs(aspect - 1.778), Math.abs(aspect - 1.0))
-    const aspectScore = Math.max(0, 1 - aspectDiff / 0.5)
-    const sizeScore  = Math.min(1, d1 / 0.3)
-    candidates.push({ mesh: obj, score: flatScore * 0.55 + aspectScore * 0.30 + sizeScore * 0.15 })
+    const mat = (obj.material?.name ?? '').toLowerCase()
+    if (EXCLUDE_KW.some(kw => mat.includes(kw))) return
+
+    const hasScreenKw = SCREEN_KW.some(kw => mat.includes(kw))
+    if (!hasScreenKw) return
+
+    _b.setFromObject(obj); _b.getSize(_s)
+    const [d1, , d3] = [_s.x, _s.y, _s.z].sort((a, b) => b - a)
+    if (d1 < 0.01 || d1 > MAX_SIZE) return
+
+    const flat  = d3 / d1
+    if (flat >= 0.30) return
+
+    // Score : matériau "screen" prioritaire (×0.5), sinon flat ratio brut
+    const score = mat.includes('screen') ? flat * 0.5 : flat
+    if (score < bestScore) { bestScore = score; best = obj }
   })
-  candidates.sort((a, b) => b.score - a.score)
-  return candidates[0]?.mesh ?? null
+
+  if (best) {
+    _b.setFromObject(best)
+    const ctr = new THREE.Vector3(); _b.getCenter(ctr)
+    console.log(
+      `[VintagePC] ✓ fallback "${best.name}" mat="${best.material?.name}"` +
+      ` ctr=(${ctr.x.toFixed(3)},${ctr.y.toFixed(3)},${ctr.z.toFixed(3)})`
+    )
+  }
+  return best
 }
 
-// ── Vecteurs réutilisables (zéro allocation par frame) ───────────
-const _p      = new THREE.Vector3()
-const _q      = new THREE.Quaternion()
-const _wScale = new THREE.Vector3()
-
-// ── ScreenContent ─────────────────────────────────────────────────
-// Positionné à la RACINE du Canvas (hors de PresentationControls)
-// pour éviter la double-transformation. Chaque frame, getWorldPosition()
-// lit la position world résolue du mesh-écran et la copie impérativement
-// sur le groupe parent du Html (pas de useState = pas de re-render).
+// ── VintagePC ─────────────────────────────────────────────────────────
+// Approche Henry Heffernan :
+//   <primitive scene> → <group localPos+worldQuat+htmlScale> → <Html transform occlude>
+// Le groupe hérite de la position/rotation/scale de l'écran en espace LOCAL de la primitive,
+// donc PresentationControls entraîne l'overlay sans aucune double-transformation.
 //
-// Layout dans la scène :
-//   Canvas root
-//     ├── PresentationControls.group
-//     │     └── VintagePC (primitive GLB + mesh-écran)
-//     └── ScreenContent           ← hors du group PresentationControls
-//           ├── pointLight (impératif, devant l'écran)
-//           └── group (impératif, position+rotation+scale = mesh-écran)
-//                 └── Html transform  ← OS React
-export function ScreenContent({ isFocused }) {
-  const screenRef      = useWindowStore((s) => s.screenRef)
+// Calcul des transformées :
+//   scene.updateWorldMatrix(true, true)  ← OBLIGATOIRE avant tout Box3.setFromObject
+//   screenNormal = Z-local du mesh → world (via worldQuat)
+//   frontFace    = worldCenter + normal × (depth/2 + 2mm)  ← évite le z-fighting
+//   localPos     = frontFace / PC_MODEL_SCALE              ← espace de la primitive
+//   htmlScale    = worldW / (DOM_W × PC_MODEL_SCALE)       ← DOM_W px = worldW mètres
+export function VintagePC({ onMonitorClick, isFocused }) {
+  const { scene, nodes } = useGLTF('/models/vintage_pc.glb')
+  const setScreenRef    = useWindowStore((s) => s.setScreenRef)
   const setScreenCenter = useWindowStore((s) => s.setScreenCenter)
-
-  const groupRef    = useRef()   // group parent du Html (impératif)
-  const lightRef    = useRef()   // PointLight impératif
-  const dynScale    = useRef(SCALE_FACTOR)
-  const scaleReady  = useRef(false)
-  const centerSaved = useRef(false)
-
-  // Reset si le mesh change (rechargement GLB, HMR)
-  useEffect(() => {
-    scaleReady.current  = false
-    centerSaved.current = false
-  }, [screenRef])
-
-  // Chaque frame : coller le groupe au mesh-écran
-  useFrame(() => {
-    if (!screenRef || !groupRef.current) return
-
-    // ── Position + rotation depuis le mesh réel ───────────────────
-    screenRef.getWorldPosition(_p)
-    screenRef.getWorldQuaternion(_q)
-
-    groupRef.current.position.copy(_p)
-    groupRef.current.quaternion.copy(_q)
-    groupRef.current.scale.setScalar(dynScale.current)
-
-    // ── Point light légèrement devant l'écran ─────────────────────
-    if (lightRef.current) {
-      lightRef.current.position.set(_p.x, _p.y, _p.z + 0.15)
-    }
-
-    // ── Calcul du scale dynamique (une seule fois) ────────────────
-    // worldW = largeur locale du mesh × scale world → même formule que CSS3DBridge.
-    if (!scaleReady.current && screenRef.geometry) {
-      screenRef.geometry.computeBoundingBox()
-      const box = screenRef.geometry.boundingBox
-      if (box) {
-        const localW = box.max.x - box.min.x
-        screenRef.getWorldScale(_wScale)
-        const worldW = Math.abs(localW * _wScale.x)
-        if (worldW > 0) {
-          dynScale.current = worldW / DOM_W
-          scaleReady.current = true
-          console.log(
-            `[ScreenContent] ✓ worldW=${worldW.toFixed(4)}u  ` +
-            `scale=${dynScale.current.toFixed(6)}  ` +
-            `pos=(${_p.x.toFixed(3)}, ${_p.y.toFixed(3)}, ${_p.z.toFixed(3)})`
-          )
-        }
-      }
-    }
-
-    // ── Stocker le centre pour le zoom (une seule fois) ───────────
-    if (!centerSaved.current && scaleReady.current) {
-      setScreenCenter({ x: _p.x, y: _p.y, z: _p.z })
-      centerSaved.current = true
-    }
-  })
-
-  return (
-    <>
-      {/* Halo CRT : PointLight positionné en impératif (hors du groupe scalé) */}
-      <pointLight
-        ref={lightRef}
-        color="#80d4ff"
-        intensity={1.2}
-        distance={2.5}
-        decay={2}
-      />
-
-      {/* Groupe impératif — position/rotation/scale = mesh-écran à chaque frame */}
-      <group ref={groupRef}>
-        {/*
-          Html transform sans props position/rotation/scale :
-          il hérite tout du groupe parent via matrixWorld.
-
-          group.scale = worldW/DOM_W (≈0.001)
-          → 640 px DOM × 0.001 = 0.64 u Three.js = largeur réelle du mesh
-        */}
-        <Html
-          transform
-          zIndexRange={[100, 0]}
-          style={{
-            width:         DOM_W,
-            height:        DOM_H,
-            overflow:      'hidden',
-            pointerEvents: isFocused ? 'auto' : 'none',
-            background:    '#008080',
-          }}
-        >
-          <OS />
-        </Html>
-      </group>
-    </>
-  )
-}
-
-// ── VintagePC ────────────────────────────────────────────────────
-export function VintagePC({ onMonitorClick }) {
-  const { scene } = useGLTF('/models/vintage_pc.glb')
-  const fallbackRef  = useRef()
-  const setScreenRef = useWindowStore((s) => s.setScreenRef)
+  const [screenInfo, setScreenInfo] = useState(null)
 
   useEffect(() => {
-    const screenMesh = detectScreenMesh(scene)
+    // ① Matrices world à jour — DOIT précéder tout Box3.setFromObject.
+    //    Sans cela les dimensions reviennent en unités modèle (×10).
+    scene.updateWorldMatrix(true, true)
 
-    if (screenMesh) {
-      console.log(`[VintagePC] ✓ Mesh-écran : "${screenMesh.name}"`)
-      setScreenRef(screenMesh)
-
-      // Allumer l'écran : phosphore CRT
-      const mat = screenMesh.material
-      if (mat && !mat._crtLit) {
-        mat.emissive          = new THREE.Color('#003355')
-        mat.emissiveIntensity = 3.0
-        mat.needsUpdate       = true
-        mat._crtLit           = true
-      }
-      if (DEBUG_HIGHLIGHT_SCREEN) {
-        mat.emissive.set('#00ff44'); mat.needsUpdate = true
-        setTimeout(() => { mat.emissive.set('#003355'); mat.needsUpdate = true }, 3000)
-      }
-    } else {
-      if (fallbackRef.current) setScreenRef(fallbackRef.current)
+    // ② Mesh-écran : Object_19 = face CRT du C64 (mat="monitor_screen", flat≈0.098)
+    const screenMesh = nodes.Object_19 ?? detectScreenMesh(scene)
+    if (!screenMesh) {
+      console.warn('[VintagePC] Aucun mesh-écran détecté')
+      return
     }
+    console.log(`[VintagePC] ✓ Mesh-écran : "${screenMesh.name}"`)
+    setScreenRef(screenMesh)
+
+    // ③ CRT phosphore bleu
+    const mat = screenMesh.material
+    if (mat && !mat._crtLit) {
+      mat.emissive          = new THREE.Color('#003355')
+      mat.emissiveIntensity = 3.0
+      mat.needsUpdate       = true
+      mat._crtLit           = true
+    }
+    if (DEBUG_HIGHLIGHT_SCREEN) {
+      mat.emissive.set('#00ff44'); mat.needsUpdate = true
+      setTimeout(() => { mat.emissive.set('#003355'); mat.needsUpdate = true }, 3000)
+    }
+
+    // ④ Quaternion world de l'écran (inclinaison du moniteur CRT)
+    const worldQuat = new THREE.Quaternion()
+    screenMesh.getWorldQuaternion(worldQuat)
+
+    // ⑤ Bbox world → centre + taille
+    const worldBbox   = new THREE.Box3().setFromObject(screenMesh)
+    const worldCenter = new THREE.Vector3()
+    const worldSize   = new THREE.Vector3()
+    worldBbox.getCenter(worldCenter)
+    worldBbox.getSize(worldSize)
+
+    // ⑥ Normale de l'écran (axe +Z local → world) — nécessaire pour le décalage Z
+    const screenNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(worldQuat)
+
+    // ⑦ Face avant : centre + demi-profondeur + 2 mm de sécurité (z-fighting)
+    const halfDepth  = worldSize.z * 0.5
+    const frontWorld = worldCenter.clone().addScaledVector(screenNormal, halfDepth + 0.002)
+
+    // ⑧ Passage espace local de la primitive (÷ PC_MODEL_SCALE, car <primitive scale=0.1>)
+    const localPos = frontWorld.clone().divideScalar(PC_MODEL_SCALE)
+
+    // ⑨ Largeur world → scale CSS : DOM_W px doit couvrir worldW mètres
+    //
+    // Facteur drei : <Html transform> applique en interne
+    //   getObjectCSSMatrix(matrix, 400 / (distanceFactor ?? 10))
+    // → les éléments de rotation/scale de la worldMatrix sont divisés par ce
+    //   facteur (40 par défaut) avant d'être passés à la CSS matrix3d.
+    // → Pour compenser, htmlScale doit être ×40 afin que l'HTML couvre
+    //   exactement worldW unités à toute distance caméra (grâce à la
+    //   perspective CSS qui compense automatiquement la profondeur).
+    const DREI_FACTOR = 400 / 10  // 400 / distanceFactor_default
+    const worldW   = Math.max(worldSize.x, worldSize.y)   // exclut la profondeur
+    const htmlScale = worldW > 0
+      ? worldW * DREI_FACTOR / (DOM_W * PC_MODEL_SCALE)
+      : 0.001 * DREI_FACTOR / PC_MODEL_SCALE
+
+    console.log(
+      `[VintagePC] worldCenter=(${worldCenter.x.toFixed(3)}, ${worldCenter.y.toFixed(3)}, ${worldCenter.z.toFixed(3)})` +
+      `  worldW=${worldW.toFixed(4)}  htmlScale=${htmlScale.toFixed(6)}`
+    )
+
+    setScreenCenter({ x: worldCenter.x, y: worldCenter.y, z: worldCenter.z })
+    setScreenInfo({ localPos, worldQuat, htmlScale })
 
     return () => setScreenRef(null)
-  }, [scene, setScreenRef])
+  }, [nodes, scene, setScreenRef, setScreenCenter])
 
   return (
-    <>
-      <primitive
-        object={scene}
-        scale={PC_MODEL_SCALE}
-        onClick={(e) => { e.stopPropagation(); onMonitorClick?.() }}
-        onPointerOver={() => { document.body.style.cursor = 'pointer' }}
-        onPointerOut={() => { document.body.style.cursor = 'auto' }}
-      />
+    <primitive
+      object={scene}
+      scale={PC_MODEL_SCALE}
+      dispose={null}
+      onClick={(e) => { e.stopPropagation(); onMonitorClick?.() }}
+      onPointerOver={() => { document.body.style.cursor = 'pointer' }}
+      onPointerOut={() => { document.body.style.cursor = 'auto' }}
+    >
+      {/* ── Halo CRT : lueur bleue devant l'écran ── */}
+      {screenInfo && (
+        <pointLight
+          position={[
+            screenInfo.localPos.x,
+            screenInfo.localPos.y,
+            screenInfo.localPos.z + 0.12 / PC_MODEL_SCALE,
+          ]}
+          color="#60b8ff"
+          intensity={1.0}
+          distance={2.0}
+          decay={2}
+        />
+      )}
 
-      {/* Fallback invisible si aucun mesh détecté */}
-      <mesh ref={fallbackRef} position={[0, 0.80, 0.271]} visible={false}>
-        <planeGeometry args={[SCREEN_WORLD_W, SCREEN_WORLD_H]} />
-        <meshBasicMaterial />
-      </mesh>
-    </>
+      {/* ── Interface sur l'écran (approche Heffernan) ── */}
+      {/*                                                   */}
+      {/* Le groupe est positionné en espace LOCAL de la    */}
+      {/* primitive (non world) grâce à localPos.           */}
+      {/* quaternion = inclinaison réelle du mesh-écran.    */}
+      {/* scale = htmlScale → DOM_W px couvre exactement    */}
+      {/*          la largeur world de l'écran.             */}
+      {/*                                                   */}
+      {/* occlude : le boîtier du moniteur peut masquer     */}
+      {/* l'interface si on tourne le modèle (back view).   */}
+      {screenInfo && (
+        <group
+          position={[screenInfo.localPos.x, screenInfo.localPos.y, screenInfo.localPos.z]}
+          quaternion={screenInfo.worldQuat}
+          scale={screenInfo.htmlScale}
+        >
+          <Html
+            transform
+            occlude
+            zIndexRange={[100, 0]}
+            style={{
+              width:         DOM_W,
+              height:        DOM_H,
+              overflow:      'hidden',
+              // Événements souris : actifs seulement en mode focalisé.
+              // Sinon les clics traversent jusqu'au mesh 3D (onMonitorClick).
+              pointerEvents: isFocused ? 'auto' : 'none',
+            }}
+          >
+            {isFocused ? <OS /> : <ScreenContent />}
+          </Html>
+        </group>
+      )}
+    </primitive>
   )
 }
 

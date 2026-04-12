@@ -1,40 +1,42 @@
-// Ces constantes DOIVENT être importées par VintagePC.jsx ET CSS3DBridge.jsx
+// Ces constantes DOIVENT être importées par VintagePC.jsx.
 // Ne jamais les dupliquer — c'est ce qui aligne l'OS sur l'écran 3D.
-
-// Dimensions de la face de l'écran en unités Three.js (1 unit = 1 mètre)
-export const SCREEN_WORLD_W = 0.64   // largeur : 64 cm
-export const SCREEN_WORLD_H = 0.48   // hauteur : 48 cm  (ratio 4:3, Win95 authentique)
 
 // Résolution DOM de l'interface OS (pixels CSS dans le monde virtuel)
 // 640×480 = résolution Win95 originale → cohérence maximale
 export const DOM_W = 640
 export const DOM_H = 480
 
-// SCALE_FACTOR : converts DOM pixels → Three.js world units
+// Dimensions de la face de l'écran en unités Three.js (1 unit = 1 mètre)
+// Utilisées uniquement pour dériver SCALE_FACTOR ci-dessous.
+export const SCREEN_WORLD_W = 0.30   // largeur estimée : ~30 cm (écran CRT vintage)
+export const SCREEN_WORLD_H = 0.22   // hauteur estimée : ~22 cm (ratio 4:3)
+
+// SCALE_FACTOR : converts DOM pixels → Three.js world units (valeur initiale)
 // Math : on veut que DOM_W * scale = SCREEN_WORLD_W
-// Donc scale = SCREEN_WORLD_W / DOM_W = 0.64 / 640 = 0.001
-// (1 pixel CSS = 1 millimètre dans l'espace 3D)
-export const SCALE_FACTOR = SCREEN_WORLD_W / DOM_W  // = 0.001
+// Donc scale = SCREEN_WORLD_W / DOM_W = 0.30 / 640 ≈ 0.000469
+// VintagePC recalcule le scale réel depuis la géométrie à la première frame.
+export const SCALE_FACTOR = SCREEN_WORLD_W / DOM_W  // ≈ 0.000469
 
 // ── Configuration du modèle GLB ───────────────────────────────────
-// Nom exact du mesh "écran" (ex: 'Object_12').
-// null = détection automatique par analyse géométrique.
-// Object_19 détecté automatiquement (aspect 4:3 exact, mesh le plus plat)
-export const SCREEN_MESH_NAME = 'Object_19'
+// Office Assets – Vintage PC desk scene (SeverDoes3D / Sketchfab CC-BY-4.0)
+// vintage_pc.glb — scène bureau rétro avec ordinateur style Commodore era
+// Mesh écran identifié : Object_16 (material: M_Computer_2048, y=0.91 → CRT surélevé)
+// Positions clés en model space (unités = mètres, scale=1) :
+//   Bureau (table)    Object_68 : y ≈ 0.006
+//   Objets bureau     Object_10-16 : y ≈ 0.743
+//   Écran CRT         Object_16 : [0.103, 0.91, 0.502]
+//   Pinboard (mur)    z ≈ 2.26
+//
+// Commodore 64 Computer Full Pack (dark_igorek / Sketchfab CC-BY-4.0)
+// vintage_pc.glb — C64 keyboard unit + CRT monitor + périphériques
+// Unités natives ≈ 10× les mètres → PC_MODEL_SCALE = 0.1
+//
+// Positions clés en world space à scale=0.1 :
+//   Keyboard  Object_5  center(-0.037, 0.067, 0.341)  top y≈0.115
+//   Screen    Object_19 center( 0.000, 0.226,-0.035)  w≈0.306m  mat="monitor_screen"
+//   Monitor   Object_17 center( 0.000, 0.187,-0.199)  mat="monitor_black"
+//
+// Bbox totale à scale=0.1 : x≈0.92m  y≈0.46m  z≈0.57m
+export const PC_MODEL_SCALE = 0.1
 
-// Scale = SCREEN_WORLD_W / screen_world_width_at_scale_1
-// = 0.64 / 3.0575 ≈ 0.209
-export const PC_MODEL_SCALE = 0.209
-
-// Plus besoin du debug visuel maintenant que le mesh est identifié
-export const DEBUG_HIGHLIGHT_SCREEN = false
-
-// Position du groupe PC dans le monde 3D
-export const PC_WORLD_POSITION = [0, 0.76, 0]
-
-// Position locale de la face de l'écran DANS le groupe VintagePC
-// Boîtier [0.82, 0.72, 0.52] → face avant z=0.26
-// Biseau  [0.70, 0.60, 0.02] à z=0.26 → face avant biseau z=0.27
-// Écran   légèrement devant le biseau : z=0.271, centré en y=0.04 (y biseau)
-// Doit correspondre exactement à SCREEN_LOCAL dans VintagePC.jsx
-export const SCREEN_LOCAL_OFFSET = [0, 0.04, 0.271]
+export const DEBUG_HIGHLIGHT_SCREEN = true   // ← flash vert 3s au démarrage pour vérifier le mesh

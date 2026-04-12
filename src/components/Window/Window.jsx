@@ -2,33 +2,68 @@
 //
 // Design System : Heffernan-accurate (audit Puppeteer 2026-04-12)
 //
-// ─── Glassmorphism ───────────────────────────────────────────────────────────
-//   L'audit Puppeteer confirme : os.henryheffernan.com utilise
-//   backdrop-filter: NONE sur tous les éléments. Pas de blur, pas de verre.
-//   Win95 est délibérément opaque et matte — c'est l'authenticité rétro.
-//   À la place : CRT phosphor-glow (box-shadow coloré, zéro blur) sur
-//   la fenêtre active. Voir CSS : .win95-window[data-active="true"].
+// ─── Bordures 3D ─────────────────────────────────────────────────────────────
+//   4 couches inset box-shadow issues de style-tokens.json :
+//   highlight (#fff) · face (#747474) · frame (#2b2b2b) · shadow (#808080)
+//   Source : --border-raised dans win95.css, technique exacte Heffernan.
 //
-// ─── Typographie anti-blur ───────────────────────────────────────────────────
-//   Le composant applique data-theme sur la fenêtre pour activer les
-//   variables CSS Retro-Light / Retro-Dark. L'élément racine .win95-crt-root
-//   (dans OS.jsx) porte -webkit-font-smoothing: none pour le rendu CRT.
+// ─── Grain plastique ─────────────────────────────────────────────────────────
+//   .win95-grain → SVG feTurbulence noise (200×200, tuilé) en ::after
+//   Opacity 0.055, mix-blend-mode overlay : visible sur silver, invisible
+//   sur blanc (.win95-body couvre naturellement le pseudo-élément).
 //
-// ─── Événements Three.js ────────────────────────────────────────────────────
-//   setPointerCapture sur la titlebar : tous les pointermove suivants
-//   vont directement à la titlebar — le canvas WebGL ne reçoit rien.
-//   Résout le conflit PresentationControls ↔ drag de fenêtre.
+// ─── Icônes ──────────────────────────────────────────────────────────────────
+//   Lucide-react (Minus / Square / X) taille 7px strokeWidth 3.
+//   CSS filter contrast+brightness → look bitmap Win95.
+//
+// ─── Motion ──────────────────────────────────────────────────────────────────
+//   Spring stiffness=380 damping=26 mass=0.9 → rebond "plastique lourd".
+//   Exit scale 0.88 + fade 80ms → fermeture claquante authentique.
+//   dragMomentum=false + dragElastic=0 → arrêt net Win95.
+//
+// ─── Perf ────────────────────────────────────────────────────────────────────
+//   WindowBody : React.memo strict (children ref stable = zéro re-render drag).
+//   setPointerCapture : isole le drag du canvas WebGL Three.js.
+//   will-change:transform activé SEULEMENT pendant drag/resize.
+//   rAF throttling sur pointermove → 1 updateSize() max par frame.
 
 import { useRef, useState, useCallback, useEffect, memo } from 'react'
-import { motion, useMotionValue, useDragControls } from 'framer-motion'
-import { useOSStore } from '../../stores/osStore'
+import { motion, useMotionValue, useDragControls }       from 'framer-motion'
+import { Minus, Square, X }                             from 'lucide-react'
+import { useOSStore }                                   from '../../stores/osStore'
+import { cn }                                           from '../../utils/cn'
 
-/* ──────────────────────────────────────────────────────────────────────────
-   WindowBody — React.memo strict
-   Ne re-rend JAMAIS pendant un drag ou resize de la fenêtre parente.
-   Le contenu (JSX pré-créé dans Desktop.jsx ICONS[]) est une référence
-   stable → la comparaison de props retourne toujours true.
-   ────────────────────────────────────────────────────────────────────────── */
+/* ── Variants Framer Motion ─────────────────────────────────────── */
+
+const SPRING = { type: 'spring', stiffness: 380, damping: 26, mass: 0.9 }
+const SNAP   = { duration: 0.08, ease: 'easeIn' }
+
+const VARIANTS = {
+  hidden:  { scale: 0.88, opacity: 0, y: 10, transition: SNAP  },
+  visible: { scale: 1,    opacity: 1, y: 0,  transition: SPRING },
+  exit:    { scale: 0.88, opacity: 0, y: 10, transition: SNAP  },
+}
+
+/* ── CtrlButton ─────────────────────────────────────────────────── */
+// Bouton titlebar réutilisable — Lucide icon 7px strokeWidth 3
+// filtre CSS dans win95.css (.win95-ctrl-btn svg)
+
+const CtrlButton = memo(({ icon: Icon, title, className, onPointerDown, onClick }) => (
+  <button
+    className={cn('win95-ctrl-btn', className)}
+    title={title}
+    onPointerDown={onPointerDown}
+    onClick={onClick}
+  >
+    <Icon size={7} strokeWidth={3} aria-hidden="true" />
+  </button>
+))
+CtrlButton.displayName = 'CtrlButton'
+
+/* ── WindowBody ─────────────────────────────────────────────────── */
+// Comparaison de référence stricte : tant que Desktop.jsx passe la
+// même instance JSX (créée à la racine du module), WindowBody ne
+// se re-rend JAMAIS pendant un drag ou un resize.
 
 const WindowBody = memo(
   ({ children }) => <div className="win95-body">{children}</div>,
@@ -36,9 +71,7 @@ const WindowBody = memo(
 )
 WindowBody.displayName = 'WindowBody'
 
-/* ──────────────────────────────────────────────────────────────────────────
-   Window
-   ────────────────────────────────────────────────────────────────────────── */
+/* ── Window ─────────────────────────────────────────────────────── */
 
 export function Window({
   id,
@@ -50,18 +83,13 @@ export function Window({
   zIndex,
   isMinimized,
   isMaximized,
-  theme = 'retro-light',
 }) {
   const {
-    closeWindow,
-    minimizeWindow,
-    maximizeWindow,
-    focusWindow,
-    updatePosition,
-    updateSize,
+    closeWindow, minimizeWindow, maximizeWindow,
+    focusWindow, updatePosition, updateSize,
   } = useOSStore()
 
-  /* ── Motion values — hors React, zéro re-render pendant le drag ── */
+  /* ── Motion values hors React : zéro re-render pendant le drag ── */
   const dragControls = useDragControls()
   const x = useMotionValue(position.x)
   const y = useMotionValue(position.y)
@@ -72,34 +100,24 @@ export function Window({
     y.set(position.y)
   }, [position.x, position.y]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ── État actif (titlebar bleue vs grise) ── */
-  const [isActive, setIsActive] = useState(false)
-
-  /* ── Resize ── */
-  const resizeOrigin = useRef(null)
+  const [isActive,   setIsActive]   = useState(false)
   const [isResizing, setIsResizing] = useState(false)
-  const rafRef = useRef(null)
+  const windowRef    = useRef(null)
+  const rafRef       = useRef(null)
+  const resizeOrigin = useRef(null)
 
-  /* ── will-change : activé uniquement pendant le drag/resize ──────────────
-     Ne pas mettre will-change: transform en permanence — cela crée un
-     layer GPU pour TOUTES les fenêtres simultanément → mémoire vidéo gaspillée.
-     On l'active seulement pendant l'interaction, puis on retire. */
-  const windowRef = useRef(null)
+  /* ── will-change : activé SEULEMENT pendant drag/resize ────────── */
   const setWillChange = useCallback((val) => {
     if (windowRef.current) windowRef.current.style.willChange = val
   }, [])
 
-  /* ──────────────────────────────────────────────────────────────────────
-     Titlebar — pointerdown
-     setPointerCapture(pointerId) : redirige TOUS les pointermove suivants
-     vers cet élément, même si la souris quitte ses bounds.
-     Le canvas Three.js ne reçoit plus rien → zéro conflit caméra.
-     ────────────────────────────────────────────────────────────────────── */
+  /* ── Titlebar — pointerdown ──────────────────────────────────────
+     setPointerCapture : tous les pointermove suivants vont à la
+     titlebar → le canvas Three.js / PresentationControls ne reçoit rien. */
   const handleTitlebarDown = useCallback((e) => {
     if (isMaximized || isResizing) return
-    // Capture pointer → isolement complet du canvas WebGL
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch (_) {}
-    e.stopPropagation() // bloque Three.js / PresentationControls
+    e.stopPropagation()
     setWillChange('transform')
     dragControls.start(e)
   }, [isMaximized, isResizing, dragControls, setWillChange])
@@ -109,11 +127,8 @@ export function Window({
     setWillChange('auto')
   }, [setWillChange])
 
-  /* ──────────────────────────────────────────────────────────────────────
-     Resize handle — pointerdown
-     Même isolation pointer que la titlebar.
-     rAF throttling : max 1 updateSize() par frame → pas de layout thrash.
-     ────────────────────────────────────────────────────────────────────── */
+  /* ── Resize handle — pointerdown ─────────────────────────────────
+     rAF throttling : max 1 updateSize() par frame → pas de layout thrash. */
   const handleResizeDown = useCallback((e) => {
     e.stopPropagation()
     e.preventDefault()
@@ -121,10 +136,8 @@ export function Window({
     setIsResizing(true)
     setWillChange('transform')
     resizeOrigin.current = {
-      mx: e.clientX,
-      my: e.clientY,
-      w: size.width,
-      h: size.height,
+      mx: e.clientX, my: e.clientY,
+      w: size.width, h: size.height,
     }
 
     const onMove = (ev) => {
@@ -152,26 +165,24 @@ export function Window({
     window.addEventListener('pointerup',   onUp)
   }, [id, size.width, size.height, updateSize, setWillChange])
 
-  /* ── Focus + état actif ── */
+  /* ── Focus ──────────────────────────────────────────────────────── */
   const handleWindowDown = useCallback(() => {
     setIsActive(true)
     focusWindow(id)
   }, [id, focusWindow])
 
-  /* Blur : quand une autre fenêtre est cliquée, cette fenêtre devient inactive.
-     On écoute l'événement global "pointerdown" hors de cette fenêtre. */
+  /* Blur global : perte de focus quand une autre fenêtre est cliquée */
   useEffect(() => {
     if (!isActive) return
-    const onGlobalDown = (e) => {
-      if (windowRef.current && !windowRef.current.contains(e.target)) {
+    const onGlobal = (e) => {
+      if (windowRef.current && !windowRef.current.contains(e.target))
         setIsActive(false)
-      }
     }
-    document.addEventListener('pointerdown', onGlobalDown, { capture: true })
-    return () => document.removeEventListener('pointerdown', onGlobalDown, { capture: true })
+    document.addEventListener('pointerdown', onGlobal, { capture: true })
+    return () => document.removeEventListener('pointerdown', onGlobal, { capture: true })
   }, [isActive])
 
-  /* ── Cleanup RAF sur unmount ── */
+  /* Cleanup RAF sur unmount */
   useEffect(() => () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
   }, [])
@@ -181,19 +192,22 @@ export function Window({
   return (
     <motion.div
       ref={windowRef}
-      className="win95-window"
+      className={cn(
+        'win95-window win95-grain',
+        /* Tailwind utilities pour la position absolue */
+        'absolute',
+      )}
       data-active={String(isActive)}
-      data-theme={theme}
       style={{
         zIndex,
-        width:  isMaximized ? '100%' : size.width,
+        width:  isMaximized ? '100%'              : size.width,
         height: isMaximized ? 'calc(100% - 28px)' : size.height,
         x: isMaximized ? 0 : x,
         y: isMaximized ? 0 : y,
       }}
       drag={!isMaximized && !isResizing}
       dragControls={dragControls}
-      dragListener={false}       // drag UNIQUEMENT via dragControls (titlebar)
+      dragListener={false}
       dragMomentum={false}
       dragElastic={0}
       onDragEnd={() => {
@@ -201,15 +215,16 @@ export function Window({
         updatePosition(id, { x: x.get(), y: y.get() })
       }}
       onPointerDown={handleWindowDown}
-      initial={{ scale: 0.88, opacity: 0 }}
-      animate={{ scale: 1,    opacity: 1 }}
-      exit={{    scale: 0.88, opacity: 0 }}
-      transition={{ duration: 0.12, ease: 'easeOut' }}
+      variants={VARIANTS}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
     >
 
       {/* ── Titlebar ──────────────────────────────────────────────── */}
       <div
         className="win95-titlebar"
+        style={{ cursor: isMaximized ? 'default' : 'move', flexShrink: 0 }}
         onPointerDown={handleTitlebarDown}
         onPointerUp={handleTitlebarUp}
         onDoubleClick={() => !isResizing && maximizeWindow(id)}
@@ -220,42 +235,34 @@ export function Window({
         </div>
 
         <div className="win95-controls">
-          <button
-            className="win95-ctrl-btn"
+          <CtrlButton
+            icon={Minus}
             title="Réduire"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); minimizeWindow(id) }}
-          >
-            ─
-          </button>
-          <button
-            className="win95-ctrl-btn"
-            title="Agrandir"
+          />
+          <CtrlButton
+            icon={Square}
+            title={isMaximized ? 'Restaurer' : 'Agrandir'}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); maximizeWindow(id) }}
-          >
-            □
-          </button>
-          <button
-            className="win95-ctrl-btn win95-ctrl-btn--close"
+          />
+          <CtrlButton
+            icon={X}
             title="Fermer"
+            className="win95-ctrl-btn--close"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); closeWindow(id) }}
-          >
-            ✕
-          </button>
+          />
         </div>
       </div>
 
-      {/* ── Contenu — mémoïsé, ne re-rend pas pendant move/resize ── */}
+      {/* ── Contenu — mémoïsé, jamais re-rendu pendant move/resize ── */}
       <WindowBody>{children}</WindowBody>
 
       {/* ── Poignée resize bas-droite ── */}
       {!isMaximized && (
-        <div
-          className="win95-resize-handle"
-          onPointerDown={handleResizeDown}
-        />
+        <div className="win95-resize-handle" onPointerDown={handleResizeDown} />
       )}
 
     </motion.div>

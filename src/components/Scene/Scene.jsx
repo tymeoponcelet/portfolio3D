@@ -1,28 +1,34 @@
-import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHandle, Suspense } from 'react'
 import * as THREE from 'three'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { CameraControls, PresentationControls } from '@react-three/drei'
-import { VintagePC, ScreenContent } from './VintagePC'
+import { VintagePC } from './VintagePC'
 import { useWindowStore } from '../../stores/windowStore'
 
 // ── Positions caméra ──────────────────────────────────────────────
+// Caméra calibrée pour PC_MODEL_SCALE=0.1, C64 Computer Full Pack
+// Modèle world à scale=0.1 : ~0.48m large × 0.23m haut × 0.08m profond
+// Centre approximatif : (-0.03, 0.04, 0.31)
+// Caméra calibrée pour PC_MODEL_SCALE=0.1, C64 Computer Full Pack
+// Écran Object_19 world : center=(0.000, 0.226, -0.035)  w=0.306m
+// Clavier Object_5 world : top y≈0.115  (justifie ARCH_HEIGHT=0.4)
+// Bbox totale world : x≈0.92m  y≈0.46m  z≈0.57m
 const CAMERA = {
   overview: {
-    position: [0.9, 1.2, 2.4],
-    target:   [0,   0.4, 0],
+    // Vue légèrement plongeante : tout le poste visible
+    position: [0.0, 0.35, 1.50],
+    target:   [0.0, 0.15, 0.05],
   },
-  focused: {   // fallback si screenRef absent
-    position: [0, 0.8, 1.0],
-    target:   [0, 0.8, 0],
+  focused: {   // fallback si screenCenter n'est pas encore disponible
+    position: [0.0, 0.226, 0.465],
+    target:   [0.0, 0.226, -0.035],
   },
 }
 
 // Distance caméra → écran (world units).
-// Le clavier est à z ≈ 0.9–1.1u. Avec écran à z ≈ 0.27u :
-// caméra à z = 0.27 + 1.3 = 1.57 → devant le clavier, écran visible.
-const FOCUS_DISTANCE      = 1.3
+const FOCUS_DISTANCE      = 0.5
 const TRANSITION_DURATION = 1.4   // secondes
-const ARCH_HEIGHT         = 0.8   // unités world — élévation du point de contrôle Bézier
+const ARCH_HEIGHT         = 0.4   // assez haut pour franchir le clavier (top y≈0.115)
 
 const _screenPos = new THREE.Vector3()
 
@@ -101,8 +107,8 @@ export function Scene() {
   }, [])
 
   // ── Zoom vers l'écran ─────────────────────────────────────────
-  // Utilise screenCenter (bbox center) — même point que le Html overlay.
-  // Si screenCenter n'est pas encore calculé, fallback sur bounding box live.
+  // Utilise screenCenter (calculé par ScreenContent depuis la bbox de Object_10).
+  // Si screenCenter n'est pas encore prêt, fallback sur getWorldPosition live.
   // Note : PresentationControls.enabled=false bloque le drag mais PAS les
   // clics Three.js — le guard isAnimatingRef.current protège contre la re-entrée.
   const zoomToScreen = useCallback(() => {
@@ -169,7 +175,7 @@ export function Scene() {
       if (!cc) return
       const { position: p, target: t } = CAMERA.overview
       cc.setLookAt(p[0], p[1], p[2], t[0], t[1], t[2], true)
-      setTimeout(() => setIsReady(true), TRANSITION_DURATION * 1000)
+      setIsReady(true)   // hint visible dès le début de l'animation d'intro
     }, 300)
   }, [])
 
@@ -177,33 +183,33 @@ export function Scene() {
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
 
       <Canvas
-        camera={{ position: [4, 4, 9], fov: 48 }}
+        camera={{ position: [0, 0.4, 2.0], fov: 50 }}
         shadows
         gl={{ antialias: true }}
         onCreated={handleCreated}
       >
         <ambientLight intensity={0.5} />
-        <directionalLight position={[4, 8, 4]} intensity={1.2} castShadow />
-        <pointLight position={[0, 1.26, 0.4]} intensity={0.6} color="#44aaff" distance={3} />
+        <directionalLight position={[0.5, 1, 0.5]} intensity={1.2} castShadow />
+        {/* Lumière d'ambiance bleue devant l'écran CRT */}
+        <pointLight position={[-0.03, 0.15, 0.5]} intensity={0.6} color="#44aaff" distance={1.0} />
 
         {/* ── PresentationControls : rotation interactive du modèle ─────── */}
         {/* Le modèle et l'overlay Html tournent ensemble dans ce groupe.     */}
         {/* polar ±0.15 rad (~9°), azimuth ±0.4 rad (~23°).                  */}
         {/* snap=true → retour au centre au relâchement (effet "ressort").    */}
         {/* Désactivé quand l'OS est actif pour éviter les conflits de drag.  */}
-        <PresentationControls
-          global
-          polar={[-0.15, 0.15]}
-          azimuth={[-0.4, 0.4]}
-          config={{ mass: 2, tension: 500 }}
-          enabled={!isFocused && !isAnimating}
-          snap
-        >
-          <VintagePC onMonitorClick={zoomToScreen} />
-        </PresentationControls>
-
-        {/* ScreenContent HORS de PresentationControls — élimine la double-transformation */}
-        <ScreenContent isFocused={isFocused} />
+        <Suspense fallback={null}>
+          <PresentationControls
+            global
+            polar={[-0.15, 0.15]}
+            azimuth={[-0.4, 0.4]}
+            config={{ mass: 2, tension: 500 }}
+            enabled={!isFocused && !isAnimating}
+            snap
+          >
+            <VintagePC onMonitorClick={zoomToScreen} isFocused={isFocused} />
+          </PresentationControls>
+        </Suspense>
 
         {/* ── CameraRig : animation Bézier sans collision ── */}
         <CameraRig ref={cameraRigRef} />
@@ -214,8 +220,8 @@ export function Scene() {
           makeDefault
           smoothTime={TRANSITION_DURATION}
           draggingSmoothTime={0.08}
-          minDistance={1}
-          maxDistance={15}
+          minDistance={0.1}
+          maxDistance={5}
           maxPolarAngle={Math.PI / 2 - 0.02}
           minPolarAngle={0.05}
         />

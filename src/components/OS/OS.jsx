@@ -1,6 +1,6 @@
 // src/components/OS/OS.jsx
-import { useState, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { motion, AnimatePresence, useDragControls, useMotionValue } from 'framer-motion'
 import { PortfolioApp } from './PortfolioApp'
 import '../../styles/win95.css'
 
@@ -49,50 +49,185 @@ function BootScreen({ onComplete }) {
   )
 }
 
-/* ── Fenêtre portfolio plein-écran ─────────────────────────── */
+/* ── Taskbar ─────────────────────────────────────────────────── */
 
-function PortfolioWindow() {
+function Win95Taskbar({ windowTitle, windowActive, onWindowClick }) {
+  const [time, setTime] = useState(() => new Date())
+
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 10000)
+    return () => clearInterval(t)
+  }, [])
+
+  const timeStr = time.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+
+  return (
+    <div className="win95-taskbar" style={{ zIndex: 10000 }}>
+      <button className="win95-start-btn">
+        <span style={{ fontSize: 12, lineHeight: 1 }}>⊞</span>
+        Démarrer
+      </button>
+      <div className="win95-sep" />
+      {windowTitle && (
+        <button
+          className={`win95-task-btn${windowActive ? ' active' : ''}`}
+          onClick={onWindowClick}
+        >
+          <span>💻</span>
+          {windowTitle}
+        </button>
+      )}
+      <div className="win95-tray">
+        <span className="win95-clock">{timeStr}</span>
+      </div>
+    </div>
+  )
+}
+
+/* ── Fenêtre portfolio ───────────────────────────────────────── */
+
+function PortfolioWindow({ isMaximized, onMinimize, onMaximize, onClose }) {
+  const dragControls = useDragControls()
+  const x            = useMotionValue(20)
+  const y            = useMotionValue(20)
+  const windowRef    = useRef(null)
+  const rafRef       = useRef(null)
+  const resizeOrigin = useRef(null)
+
+  const [isResizing, setIsResizing] = useState(false)
+  const [isActive,   setIsActive]   = useState(true)
+  const [size,       setSize]       = useState({ width: 480, height: 360 })
+
+  /* ── Drag titlebar ───────────────────────────────────────────── */
+  const handleTitlebarDown = useCallback((e) => {
+    if (isMaximized || isResizing) return
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch (_) {}
+    e.stopPropagation()
+    dragControls.start(e)
+  }, [isMaximized, isResizing, dragControls])
+
+  const handleTitlebarUp = useCallback((e) => {
+    try { e.currentTarget.releasePointerCapture(e.pointerId) } catch (_) {}
+  }, [])
+
+  /* ── Resize bas-droite ───────────────────────────────────────── */
+  const handleResizeDown = useCallback((e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch (_) {}
+    setIsResizing(true)
+    resizeOrigin.current = { mx: e.clientX, my: e.clientY, w: size.width, h: size.height }
+
+    const onMove = (ev) => {
+      if (!resizeOrigin.current) return
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(() => {
+        if (!resizeOrigin.current) return
+        setSize({
+          width:  Math.max(240, resizeOrigin.current.w + ev.clientX - resizeOrigin.current.mx),
+          height: Math.max(160, resizeOrigin.current.h + ev.clientY - resizeOrigin.current.my),
+        })
+      })
+    }
+
+    const onUp = () => {
+      setIsResizing(false)
+      resizeOrigin.current = null
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup',   onUp)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup',   onUp)
+  }, [size.width, size.height])
+
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+  }, [])
+
   return (
     <motion.div
+      ref={windowRef}
       className="win95-window"
-      data-active="true"
+      data-active={String(isActive)}
       style={{
-        position: 'absolute',
-        inset: 6,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
+        zIndex: 100,
+        ...(isMaximized
+          ? { position: 'absolute', inset: '0 0 28px 0' }
+          : { position: 'absolute', width: size.width, height: size.height, x, y }
+        ),
       }}
+      drag={!isMaximized && !isResizing}
+      dragControls={dragControls}
+      dragListener={false}
+      dragMomentum={false}
+      dragElastic={0}
+      onPointerDown={() => setIsActive(true)}
       initial={{ scale: 0.92, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
+      animate={{ scale: 1,    opacity: 1 }}
+      exit={{    scale: 0.92, opacity: 0 }}
       transition={{ duration: 0.15, ease: 'easeOut' }}
     >
-      {/* Titlebar — toujours active (fenêtre unique de l'OS) */}
-      <div className="win95-titlebar" style={{ cursor: 'default', flexShrink: 0 }}>
+      {/* Titlebar */}
+      <div
+        className="win95-titlebar"
+        style={{ cursor: isMaximized ? 'default' : 'move', flexShrink: 0 }}
+        onPointerDown={handleTitlebarDown}
+        onPointerUp={handleTitlebarUp}
+        onDoubleClick={() => !isResizing && onMaximize()}
+      >
         <div className="win95-title-left">
           <span className="win95-title-icon">💻</span>
           <span className="win95-title-text">Tyméo Poncelet — Portfolio</span>
         </div>
         <div className="win95-controls">
-          <button className="win95-ctrl-btn" title="Réduire"   onPointerDown={(e) => e.stopPropagation()}>─</button>
-          <button className="win95-ctrl-btn" title="Agrandir"  onPointerDown={(e) => e.stopPropagation()}>□</button>
-          <button className="win95-ctrl-btn win95-ctrl-btn--close" title="Fermer" onPointerDown={(e) => e.stopPropagation()}>✕</button>
+          <button
+            className="win95-ctrl-btn"
+            title="Réduire"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onMinimize() }}
+          >─</button>
+          <button
+            className="win95-ctrl-btn"
+            title={isMaximized ? 'Restaurer' : 'Agrandir'}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onMaximize() }}
+          >□</button>
+          <button
+            className="win95-ctrl-btn win95-ctrl-btn--close"
+            title="Fermer"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onClose() }}
+          >✕</button>
         </div>
       </div>
 
-      {/* Corps : sidebar + contenu */}
+      {/* Contenu */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <PortfolioApp />
       </div>
+
+      {/* Poignée resize (uniquement en mode fenêtré) */}
+      {!isMaximized && (
+        <div className="win95-resize-handle" onPointerDown={handleResizeDown} />
+      )}
     </motion.div>
   )
 }
 
-/* ── OS principal ─────────────────────────────────────────── */
+/* ── OS principal ─────────────────────────────────────────────── */
 
 export function OS() {
-  const [booted, setBooted] = useState(false)
-  const handleBooted = useCallback(() => setBooted(true), [])
+  const [booted,   setBooted]   = useState(false)
+  const [winState, setWinState] = useState('max') // 'max' | 'windowed' | 'minimized'
+
+  const handleBooted  = useCallback(() => setBooted(true), [])
+  const handleMinimize = useCallback(() => setWinState('minimized'), [])
+  const handleMaximize = useCallback(() => setWinState((s) => s === 'max' ? 'windowed' : 'max'), [])
+  const handleClose    = useCallback(() => setWinState('minimized'), [])
+  const handleTaskbar  = useCallback(() => setWinState((s) => s === 'minimized' ? 'windowed' : 'minimized'), [])
+  const handleIconOpen = useCallback(() => setWinState('max'), [])
 
   return (
     <div
@@ -124,7 +259,37 @@ export function OS() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <PortfolioWindow />
+            {/* Icône bureau — visible uniquement quand la fenêtre n'est pas maximisée */}
+            {winState !== 'max' && (
+              <div
+                className="win95-icon"
+                style={{ position: 'absolute', top: 10, left: 8, zIndex: 50 }}
+                onDoubleClick={handleIconOpen}
+              >
+                <span className="win95-icon-img">💻</span>
+                <span className="win95-icon-label">Portfolio</span>
+              </div>
+            )}
+
+            {/* Fenêtre portfolio */}
+            <AnimatePresence>
+              {winState !== 'minimized' && (
+                <PortfolioWindow
+                  key="portfolio-win"
+                  isMaximized={winState === 'max'}
+                  onMinimize={handleMinimize}
+                  onMaximize={handleMaximize}
+                  onClose={handleClose}
+                />
+              )}
+            </AnimatePresence>
+
+            {/* Barre des tâches */}
+            <Win95Taskbar
+              windowTitle="Portfolio"
+              windowActive={winState !== 'minimized'}
+              onWindowClick={handleTaskbar}
+            />
           </motion.div>
         )}
       </AnimatePresence>

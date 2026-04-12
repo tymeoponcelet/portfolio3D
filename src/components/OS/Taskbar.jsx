@@ -1,29 +1,57 @@
+// src/components/OS/Taskbar.jsx
 import { useState, useEffect, useRef } from 'react'
-import { useWindowStore } from '../../stores/windowStore'
+import { useOSStore }     from '../../stores/osStore'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ICONS } from './Desktop'
+import { ICONS }          from './Desktop'
 
-// Éléments du menu Démarrer
+function ShutdownDialog({ onClose }) {
+  const [confirmed, setConfirmed] = useState(false)
+  return (
+    <div style={{ padding: 12, fontFamily: 'var(--w-font)', fontSize: 11, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {confirmed ? (
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 14, marginBottom: 8 }}>💾</div>
+          <div>Il est maintenant sans danger d'éteindre le portfolio.</div>
+          <div style={{ color: '#555', marginTop: 4 }}>(Ce portfolio ne s'arrête jamais !)</div>
+        </div>
+      ) : (
+        <>
+          <div>Voulez-vous vraiment quitter Windows 95 ?</div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            <button className="win95-btn" onClick={() => setConfirmed(true)}>Oui</button>
+            <button className="win95-btn" onClick={onClose}>Non</button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function ShutdownDialogWrapper() {
+  const { windows, closeWindow } = useOSStore()
+  const win = windows.find((w) => w.appId === 'shutdown')
+  const onClose = () => win && closeWindow(win.id)
+  return <ShutdownDialog onClose={onClose} />
+}
+
 const START_ITEMS = [
-  { label: 'À propos',      icon: '💻', id: 'about' },
-  { label: 'Mes Projets',   icon: '📁', id: 'projects' },
-  { label: 'Compétences',   icon: '📄', id: 'skills' },
-  { label: 'Contact',       icon: '📬', id: 'contact' },
+  { label: 'Biographie',   icon: '📄', id: 'bio'      },
+  { label: 'Mes Projets',  icon: '📁', id: 'projects' },
+  { label: 'Compétences',  icon: '⚙️', id: 'skills'   },
+  { label: 'Contact',      icon: '📬', id: 'contact'  },
   { divider: true },
-  { label: 'Aide',          icon: '❓', id: null, disabled: true },
-  { label: 'Exécuter…',     icon: '🚀', id: null, disabled: true },
+  { label: 'Aide',         icon: '❓', id: null, disabled: true },
   { divider: true },
-  { label: 'Arrêter…',      icon: '🔌', id: 'shutdown' },
+  { label: 'Arrêter…',     icon: '🔌', id: 'shutdown' },
 ]
 
 export function Taskbar() {
-  const { windows, minimizeWindow, focusWindow, openWindow } = useWindowStore()
+  const { windows, minimizeWindow, focusWindow, openWindow } = useOSStore()
   const [startOpen, setStartOpen] = useState(false)
-  const [clock, setClock] = useState('')
+  const [clock,     setClock]     = useState('')
   const menuRef = useRef(null)
   const btnRef  = useRef(null)
 
-  // Horloge — mise à jour chaque minute
   useEffect(() => {
     const tick = () =>
       setClock(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
@@ -32,13 +60,11 @@ export function Taskbar() {
     return () => clearInterval(id)
   }, [])
 
-  // Fermer le menu en cliquant en dehors
   useEffect(() => {
     if (!startOpen) return
     const close = (e) => {
-      if (!menuRef.current?.contains(e.target) && !btnRef.current?.contains(e.target)) {
+      if (!menuRef.current?.contains(e.target) && !btnRef.current?.contains(e.target))
         setStartOpen(false)
-      }
     }
     document.addEventListener('pointerdown', close)
     return () => document.removeEventListener('pointerdown', close)
@@ -49,44 +75,23 @@ export function Taskbar() {
     setStartOpen(false)
 
     if (item.id === 'shutdown') {
-      // Easter egg : dialog fermeture
-      const existing = windows.find((w) => w.title === '⚠️ Arrêt du système')
-      if (!existing) {
-        openWindow({
-          title: '⚠️ Arrêt du système',
-          icon: '🔌',
-          width: 280,
-          height: 150,
-          content: (
-            <div style={{ padding: 12, fontFamily: 'MS Sans Serif, Arial', fontSize: 11, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>Vous êtes sur le point d'arrêter le portfolio.</div>
-              <div>Voulez-vous vraiment quitter Windows 95 ?</div>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 4 }}>
-                <button className="win95-btn" onClick={() => alert('Non ! Le portfolio continue !')}>Oui</button>
-                <button className="win95-btn">Non</button>
-              </div>
-            </div>
-          ),
-        })
-      }
+      openWindow({
+        appId:   'shutdown',
+        title:   '⚠️ Arrêt du système',
+        icon:    '🔌',
+        width:   300,
+        height:  160,
+        content: <ShutdownDialogWrapper />,
+      })
       return
     }
 
     const icon = ICONS.find((i) => i.id === item.id)
-    if (!icon) return
-
-    const existing = windows.find((w) => w.title === icon.window.title)
-    if (existing) {
-      if (existing.isMinimized) minimizeWindow(existing.id)
-      focusWindow(existing.id)
-      return
-    }
-    openWindow({ ...icon.window, content: icon.window.content() })
+    if (icon) openWindow(icon.window)
   }
 
   return (
     <>
-      {/* ── Menu Démarrer ── */}
       <AnimatePresence>
         {startOpen && (
           <motion.div
@@ -121,15 +126,12 @@ export function Taskbar() {
         )}
       </AnimatePresence>
 
-      {/* ── Barre des tâches ── */}
       <div className="win95-taskbar">
-        {/* Bouton Démarrer */}
         <button
           ref={btnRef}
           className={`win95-start-btn${startOpen ? ' open' : ''}`}
           onClick={() => setStartOpen((o) => !o)}
         >
-          {/* Mini drapeau Windows 4 couleurs */}
           <svg width="14" height="14" viewBox="0 0 14 14" style={{ flexShrink: 0 }}>
             <rect x="0" y="0" width="6" height="6" fill="#e74c3c" />
             <rect x="8" y="0" width="6" height="6" fill="#2ecc71" />
@@ -141,19 +143,14 @@ export function Taskbar() {
 
         <div className="win95-sep" />
 
-        {/* Bouton par fenêtre ouverte */}
         {windows.map((w) => (
           <button
             key={w.id}
             title={w.title}
             className={`win95-task-btn${!w.isMinimized ? ' active' : ''}`}
             onClick={() => {
-              if (w.isMinimized) {
-                minimizeWindow(w.id)
-                focusWindow(w.id)
-              } else {
-                minimizeWindow(w.id)
-              }
+              if (w.isMinimized) { minimizeWindow(w.id); focusWindow(w.id) }
+              else minimizeWindow(w.id)
             }}
           >
             {w.icon && <span style={{ fontSize: 12 }}>{w.icon}</span>}
@@ -163,7 +160,6 @@ export function Taskbar() {
           </button>
         ))}
 
-        {/* Zone de notification + horloge */}
         <div className="win95-tray">
           <span style={{ fontSize: 11, marginRight: 4 }}>🔊</span>
           <span className="win95-clock">{clock}</span>

@@ -3,15 +3,38 @@
    ────────────────────────────────────────────── */
 
 :root {
-  --w-gray:     #c0c0c0;
-  --w-white:    #ffffff;
-  --w-dark:     #808080;
-  --w-darker:   #404040;
-  --w-black:    #000000;
-  --w-blue:     #000080;
-  --w-blue2:    #1084d0;
-  --w-teal:     #008080;
-  --w-font:     "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif;
+  /* ── Palette Heffernan exacte (os.henryheffernan.com) ── */
+  --w-highlight:    #ffffff;
+  --w-face:         #747474;
+  --w-shadow:       #808080;
+  --w-frame:        #2b2b2b;
+  --w-surface:      #c0c0c0;
+  --w-surface-h:    #e9e9e9;
+  --w-input-active: #fbffc4;
+
+  /* Alias courts (compatibilité) */
+  --w-gray:   var(--w-surface);
+  --w-white:  var(--w-highlight);
+  --w-dark:   var(--w-shadow);
+  --w-darker: var(--w-frame);
+  --w-black:  #000000;
+  --w-blue:   #000080;
+  --w-blue2:  #1084d0;
+  --w-teal:   #008080;
+  --w-font:   "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif;
+
+  /* ── Borders 3D Heffernan (box-shadow inset) ── */
+  --border-raised:
+    inset  1px  1px var(--w-highlight),
+    inset  2px  2px var(--w-face),
+    inset -1px -1px var(--w-frame),
+    inset -2px -2px var(--w-shadow);
+
+  --border-sunken:
+    inset  1px  1px var(--w-shadow),
+    inset  2px  2px var(--w-frame),
+    inset -1px -1px var(--w-highlight),
+    inset -2px -2px var(--w-face);
 }
 
 /* ── Reset dans le contexte de l'OS ── */
@@ -105,10 +128,8 @@
   position: absolute;
   display: flex;
   flex-direction: column;
-  background: var(--w-gray);
-  border: 2px solid;
-  border-color: var(--w-white) var(--w-darker) var(--w-darker) var(--w-white);
-  box-shadow: 1px 1px 0 var(--w-darker);
+  background: var(--w-surface);
+  box-shadow: var(--border-raised);
   font-family: var(--w-font);
   font-size: 11px;
   min-width: 180px;
@@ -173,6 +194,11 @@
   padding: 1px 0 0 1px;
 }
 
+.win95-ctrl-btn--close:hover {
+  background: #c00000;
+  color: #fff;
+}
+
 /* ── Menu bar ── */
 .win95-menubar {
   display: flex;
@@ -194,14 +220,12 @@
 .win95-body {
   flex: 1;
   margin: 2px;
-  overflow: hidden;        /* chaque contenu gère son propre scroll */
+  overflow: hidden;
   background: #fff;
-  border: 2px solid;
-  border-color: var(--w-dark) var(--w-white) var(--w-white) var(--w-dark);
-  box-shadow: inset 1px 1px 0 var(--w-darker);
+  box-shadow: var(--border-sunken);
   cursor: default;
   user-select: text;
-  padding: 0;              /* padding géré par chaque composant-contenu */
+  padding: 0;
   font-family: var(--w-font);
   font-size: 11px;
   display: flex;
@@ -316,6 +340,22 @@
   height: calc(100% - 28px);
   background: var(--w-teal);
   overflow: hidden;
+}
+
+/* ── Scanlines CRT ── */
+.win95-desktop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 1px,
+    rgba(0, 0, 0, 0.06) 1px,
+    rgba(0, 0, 0, 0.06) 2px
+  );
+  pointer-events: none;
+  z-index: 99998;
 }
 
 .win95-icon {
@@ -523,8 +563,7 @@
 }
 .win95-statusbar-field {
   padding: 0 4px;
-  border: 1px solid;
-  border-color: var(--w-dark) var(--w-white) var(--w-white) var(--w-dark);
+  box-shadow: var(--border-sunken);
   height: 14px;
   display: flex;
   align-items: center;

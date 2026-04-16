@@ -13,8 +13,8 @@
 //   sur blanc (.win95-body couvre naturellement le pseudo-élément).
 //
 // ─── Icônes ──────────────────────────────────────────────────────────────────
-//   Lucide-react (Minus / Square / X) taille 7px strokeWidth 3.
-//   CSS filter contrast+brightness → look bitmap Win95.
+//   PNG pixel-art via getIcon('minimize' | 'maximize' | 'close') — assets/icons/index.js
+//   Taille 10×10px (CSS), image-rendering:pixelated, filtre contrast/brightness dans .win95-ctrl-btn img.
 //
 // ─── Motion ──────────────────────────────────────────────────────────────────
 //   Spring stiffness=380 damping=26 mass=0.9 → rebond "plastique lourd".

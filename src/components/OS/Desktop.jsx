@@ -1,120 +1,124 @@
 // src/components/OS/Desktop.jsx
 //
-// Responsabilités :
-//   - Fond teal Win95 + vignettage CRT (win95.css)
-//   - Icônes bureau avec Lucide (filtre rétro .win95-icon-lucide)
-//   - Rendu de toutes les fenêtres ouvertes (AnimatePresence + Window)
-//   - Refs stables pour WindowBody.memo → zéro re-render pendant drag
+// DesktopShortcut — pattern Henry Heffernan :
+//   • 1 clic  → sélection (fond checkerboard bleu masqué sur l'icône PNG)
+//   • 2 clics → ouverture de la fenêtre
+//   • clic extérieur → désélection
 //
-// Architecture des contenus :
-//   Les JSX elements (<BioNotepad />, etc.) sont créés UNE SEULE FOIS
-//   à la racine du module (hors render). Résultat : la ref children
-//   passée à WindowBody est toujours la même instance → WindowBody.memo
-//   retourne false (pas de re-render) pendant les drag/resize. ✓
+// Icônes PNG importées via src/assets/icons/index.js
 
 import { useRef, useCallback, useState } from 'react'
-import { AnimatePresence, motion }       from 'framer-motion'
-import { FileText, FolderOpen, Settings2, Mail } from 'lucide-react'
-import { useOSStore }    from '../../stores/osStore'
-import { Window }        from '../Window/Window'
-import { Taskbar }       from './Taskbar'
-import { BioNotepad }    from './apps/BioNotepad'
-import { ProjectsExplorer } from './apps/ProjectsExplorer'
-import { SkillsApp }     from './apps/SkillsApp'
-import { ContactApp }    from './apps/ContactApp'
-import { cn }            from '../../utils/cn'
+import { AnimatePresence }               from 'framer-motion'
+import { icons }                         from '../../assets/icons/index.js'
+import { useOSStore }                    from '../../stores/osStore'
+import { Window }                        from '../Window/Window'
+import { Taskbar }                       from './Taskbar'
+import { BioNotepad }                    from './apps/BioNotepad'
+import { ProjectsExplorer }              from './apps/ProjectsExplorer'
+import { SkillsApp }                     from './apps/SkillsApp'
+import { ContactApp }                    from './apps/ContactApp'
 
 /* ── Registre des icônes & fenêtres ─────────────────────────────── */
-// Les contenus JSX sont créés ici une seule fois (scope module).
-// Passer win.content comme children à <Window> donne une référence
-// stable → WindowBody.memo ne re-rend JAMAIS pendant drag/resize.
 
 export const ICONS = [
   {
-    id:           'bio',
-    label:        'Biographie',
-    icon:         '📄',
-    LucideIcon:   FileText,
-    pos:          { top: 6,   left: 10 },
+    id:       'bio',
+    label:    'Biographie',
+    iconSrc:  icons.showcaseIcon,
+    pos:      { top: 6, left: 10 },
     window: {
       appId:   'bio',
       title:   'BIOGRAPHIE.TXT — Bloc-notes',
       icon:    '📄',
-      width:   460,
-      height:  380,
+      width:   480,
+      height:  400,
       content: <BioNotepad />,
     },
   },
   {
-    id:           'projects',
-    label:        'Mes Projets',
-    icon:         '📁',
-    LucideIcon:   FolderOpen,
-    pos:          { top: 100, left: 10 },
+    id:       'projects',
+    label:    'Mes Projets',
+    iconSrc:  icons.windowExplorerIcon,
+    pos:      { top: 110, left: 10 },
     window: {
       appId:   'projects',
       title:   'C:\\Projets',
       icon:    '📁',
-      width:   560,
-      height:  380,
+      width:   580,
+      height:  400,
       content: <ProjectsExplorer />,
     },
   },
   {
-    id:           'skills',
-    label:        'Compétences',
-    icon:         '⚙️',
-    LucideIcon:   Settings2,
-    pos:          { top: 194, left: 10 },
+    id:       'skills',
+    label:    'Compétences',
+    iconSrc:  icons.computerBig,
+    pos:      { top: 214, left: 10 },
     window: {
       appId:   'skills',
       title:   'Compétences — Panneau de configuration',
       icon:    '⚙️',
-      width:   380,
-      height:  360,
+      width:   400,
+      height:  380,
       content: <SkillsApp />,
     },
   },
   {
-    id:           'contact',
-    label:        'Contact',
-    icon:         '📬',
-    LucideIcon:   Mail,
-    pos:          { top: 288, left: 10 },
+    id:       'contact',
+    label:    'Contact',
+    iconSrc:  icons.credits,
+    pos:      { top: 318, left: 10 },
     window: {
       appId:   'contact',
       title:   "Contact — Carnet d'adresses",
       icon:    '📬',
-      width:   340,
-      height:  260,
+      width:   360,
+      height:  280,
       content: <ContactApp />,
     },
   },
 ]
 
-/* ── DesktopIcon ─────────────────────────────────────────────────── */
-// Icône de bureau avec Lucide + filtre rétro bitmap Win95.
-// Sélection sur click, ouverture sur double-click (comportement Win95).
+/* ── DesktopShortcut ─────────────────────────────────────────────── */
 
-function DesktopIcon({ entry, isSelected, onSelect, onOpen }) {
-  const { LucideIcon, label, pos } = entry
+function DesktopShortcut({ entry, isSelected, onSelect, onOpen }) {
+  const { iconSrc, label, pos } = entry
+  const timerRef = useRef(null)
+
+  const handleClick = useCallback(() => {
+    if (timerRef.current) {
+      // Double-clic détecté
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+      onOpen()
+      return
+    }
+    onSelect()
+    timerRef.current = setTimeout(() => { timerRef.current = null }, 300)
+  }, [onSelect, onOpen])
 
   return (
     <button
-      className={cn('win95-icon', isSelected && 'selected')}
-      style={{ position: 'absolute', top: pos.top, left: pos.left }}
-      onClick={(e)      => { e.stopPropagation(); onSelect() }}
-      onDoubleClick={(e) => { e.stopPropagation(); onOpen()  }}
+      className={`win95-shortcut${isSelected ? ' selected' : ''}`}
+      style={{ top: pos.top, left: pos.left }}
+      onMouseDown={handleClick}
       aria-label={`Ouvrir ${label}`}
     >
-      <span className="win95-icon-img">
-        <LucideIcon
-          size={32}
-          strokeWidth={1.5}
-          className="win95-icon-lucide"
+      <div className="win95-shortcut-icon-wrap">
+        {/* Overlay checkerboard masqué sur la forme de l'icône */}
+        {isSelected && (
+          <div
+            className="win95-shortcut-overlay"
+            style={{ WebkitMaskImage: `url(${iconSrc})` }}
+          />
+        )}
+        <img
+          src={iconSrc}
+          alt={label}
+          className="win95-shortcut-img"
         />
-      </span>
-      <span className="win95-icon-label">{label}</span>
+      </div>
+      <span className="win95-shortcut-label">{label}</span>
     </button>
   )
 }
@@ -126,34 +130,25 @@ export function Desktop() {
   const openWindow = useOSStore((s) => s.openWindow)
   const [selected, setSelected] = useState(null)
 
-  /* Refs stables pour les contenus de fenêtres (memoïsation WindowBody) */
   const contentRefs = useRef({})
   windows.forEach((w) => {
     if (!contentRefs.current[w.id]) {
-      // Chercher le content de l'icône correspondante
       const icon = ICONS.find((i) => i.id === w.appId)
       contentRefs.current[w.id] = icon?.window.content ?? w.content ?? null
     }
   })
-  // Nettoyage des fenêtres fermées
   const openIds = new Set(windows.map((w) => w.id))
   Object.keys(contentRefs.current).forEach((id) => {
     if (!openIds.has(Number(id))) delete contentRefs.current[id]
   })
 
-  const handleOpen = useCallback((icon) => {
-    openWindow(icon.window)
-  }, [openWindow])
+  const handleOpen = useCallback((icon) => { openWindow(icon.window) }, [openWindow])
 
   return (
-    <div
-      className="win95-desktop"
-      onClick={() => setSelected(null)}
-    >
+    <div className="win95-desktop" onClick={() => setSelected(null)}>
 
-      {/* Icônes bureau */}
       {ICONS.map((icon) => (
-        <DesktopIcon
+        <DesktopShortcut
           key={icon.id}
           entry={icon}
           isSelected={selected === icon.id}
@@ -162,7 +157,6 @@ export function Desktop() {
         />
       ))}
 
-      {/* Fenêtres ouvertes — AnimatePresence gère les entrées/sorties */}
       <AnimatePresence>
         {windows.map((win) => (
           <Window key={win.id} {...win}>
@@ -171,9 +165,7 @@ export function Desktop() {
         ))}
       </AnimatePresence>
 
-      {/* Barre des tâches */}
       <Taskbar />
-
     </div>
   )
 }

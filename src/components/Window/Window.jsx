@@ -29,7 +29,9 @@
 
 import { useRef, useState, useCallback, useEffect, memo } from 'react'
 import { motion, useMotionValue, useDragControls }       from 'framer-motion'
-import { Minus, Square, X }                             from 'lucide-react'
+import { getIcon }                                      from '../../assets/icons/index.js'
+import { DragIndicator }                                from './DragIndicator.jsx'
+import { ResizeIndicator }                              from './ResizeIndicator.jsx'
 import { useOSStore }                                   from '../../stores/osStore'
 import { cn }                                           from '../../utils/cn'
 
@@ -45,17 +47,17 @@ const VARIANTS = {
 }
 
 /* ── CtrlButton ─────────────────────────────────────────────────── */
-// Bouton titlebar réutilisable — Lucide icon 7px strokeWidth 3
-// filtre CSS dans win95.css (.win95-ctrl-btn svg)
+// Bouton titlebar réutilisable — PNG pixel-art icon
+// filtre CSS dans win95.css (.win95-ctrl-btn img)
 
-const CtrlButton = memo(({ icon: Icon, title, className, onPointerDown, onClick }) => (
+const CtrlButton = memo(({ iconSrc, title, className, onPointerDown, onClick }) => (
   <button
     className={cn('win95-ctrl-btn', className)}
     title={title}
     onPointerDown={onPointerDown}
     onClick={onClick}
   >
-    <Icon size={7} strokeWidth={3} aria-hidden="true" />
+    <img src={iconSrc} alt={title} />
   </button>
 ))
 CtrlButton.displayName = 'CtrlButton'
@@ -102,6 +104,7 @@ export function Window({
 
   const [isActive,   setIsActive]   = useState(false)
   const [isResizing, setIsResizing] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   const windowRef    = useRef(null)
   const rafRef       = useRef(null)
   const resizeOrigin = useRef(null)
@@ -210,7 +213,9 @@ export function Window({
       dragListener={false}
       dragMomentum={false}
       dragElastic={0}
+      onDragStart={() => { setIsDragging(true); setWillChange('transform') }}
       onDragEnd={() => {
+        setIsDragging(false)
         setWillChange('auto')
         updatePosition(id, { x: x.get(), y: y.get() })
       }}
@@ -236,19 +241,19 @@ export function Window({
 
         <div className="win95-controls">
           <CtrlButton
-            icon={Minus}
+            iconSrc={getIcon('minimize')}
             title="Réduire"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); minimizeWindow(id) }}
           />
           <CtrlButton
-            icon={Square}
+            iconSrc={getIcon('maximize')}
             title={isMaximized ? 'Restaurer' : 'Agrandir'}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); maximizeWindow(id) }}
           />
           <CtrlButton
-            icon={X}
+            iconSrc={getIcon('close')}
             title="Fermer"
             className="win95-ctrl-btn--close"
             onPointerDown={(e) => e.stopPropagation()}
@@ -264,6 +269,9 @@ export function Window({
       {!isMaximized && (
         <div className="win95-resize-handle" onPointerDown={handleResizeDown} />
       )}
+
+      <DragIndicator visible={isDragging} />
+      <ResizeIndicator visible={isResizing} />
 
     </motion.div>
   )

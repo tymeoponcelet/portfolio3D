@@ -740,27 +740,27 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   LUCIDE ICONS — Filtre rétro bitmap
-   Réduit la saturation et augmente le contraste pour imiter
-   les icônes Win95 scannées/compressées en 256 couleurs.
+   PNG ICONS — Pixel-art bitmap titlebar controls
    ═══════════════════════════════════════════════════════════════ */
 
-/* Icônes des boutons titlebar (Minus / Square / X) */
-.win95-ctrl-btn svg {
+/* Icônes des boutons titlebar (PNG pixel-art) */
+.win95-ctrl-btn img {
   display: block;
   flex-shrink: 0;
-  /* Contraste fort + légère désaturation = look bitmap Win95 */
-  filter: contrast(1.2) brightness(0.85);
+  width: 10px;
+  height: 10px;
+  image-rendering: pixelated;
+  filter: contrast(1.1) brightness(0.9);
 }
 
-/* Hover & active : maintenir la lisibilité */
-.win95-ctrl-btn:hover svg,
-.win95-ctrl-btn:active svg {
-  filter: contrast(1.3) brightness(0.75);
+.win95-ctrl-btn:hover img,
+.win95-ctrl-btn:active img {
+  filter: contrast(1.2) brightness(0.75);
 }
 
-.win95-ctrl-btn--close:hover svg {
-  filter: contrast(1.4) brightness(1.1) saturate(0);
+/* Close button : ne pas inverser les couleurs du PNG */
+.win95-ctrl-btn--close:hover img {
+  filter: none;
 }
 
 /* Icônes bureau Lucide (FileText / FolderOpen / Settings2 / Mail) */

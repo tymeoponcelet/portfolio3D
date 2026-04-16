@@ -8,6 +8,15 @@ export const useOSStore = create((set, get) => {
   return {
   windows: [],
 
+  isShutdown: false,
+  numShutdowns: 0,
+
+  triggerShutdown: () =>
+    set((s) => ({ isShutdown: true, numShutdowns: s.numShutdowns + 1 })),
+
+  completeShutdown: () =>
+    set(() => ({ isShutdown: false, windows: [] })),
+
   openWindow: (config) => {
     const { windows } = get()
 

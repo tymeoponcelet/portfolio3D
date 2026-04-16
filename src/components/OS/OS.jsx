@@ -1,10 +1,10 @@
 // src/components/OS/OS.jsx
-// Shell de l'OS virtuel : écran de démarrage → bureau Win95.
-// Desktop.jsx gère tout (fenêtres, taskbar, icônes).
-
+// Shell de l'OS : boot screen → bureau → ShutdownSequence → bureau.
 import { useState, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence }      from 'framer-motion'
-import { Desktop }                      from './Desktop'
+import { motion, AnimatePresence }           from 'framer-motion'
+import { Desktop }                           from './Desktop'
+import { ShutdownSequence }                  from './ShutdownSequence'
+import { useOSStore }                        from '../../stores/osStore'
 import '../../styles/win95.css'
 
 /* ── Étapes de démarrage ─────────────────────────────────────────── */
@@ -59,8 +59,12 @@ function BootScreen({ onComplete }) {
 /* ── OS ──────────────────────────────────────────────────────────── */
 
 export function OS() {
-  const [booted, setBooted] = useState(false)
+  const [booted, setBooted]   = useState(false)
   const handleBooted = useCallback(() => setBooted(true), [])
+
+  const isShutdown      = useOSStore((s) => s.isShutdown)
+  const numShutdowns    = useOSStore((s) => s.numShutdowns)
+  const completeShutdown = useOSStore((s) => s.completeShutdown)
 
   return (
     <div
@@ -68,7 +72,7 @@ export function OS() {
       data-theme="retro-light"
       style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}
     >
-      {/* Scanlines CRT (pointer-events: none → ne bloque rien) */}
+      {/* Scanlines CRT */}
       <div style={{
         position:      'absolute',
         inset:         0,
@@ -78,7 +82,18 @@ export function OS() {
       }} />
 
       <AnimatePresence mode="wait">
-        {!booted ? (
+        {isShutdown ? (
+          <motion.div
+            key="shutdown"
+            style={{ position: 'absolute', inset: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ShutdownSequence numShutdowns={numShutdowns} onComplete={completeShutdown} />
+          </motion.div>
+        ) : !booted ? (
           <motion.div
             key="boot"
             style={{ position: 'absolute', inset: 0 }}

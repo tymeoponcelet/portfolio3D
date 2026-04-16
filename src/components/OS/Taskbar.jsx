@@ -71,6 +71,7 @@ export function Taskbar() {
   const handleStartItem = (item) => {
     if (item.disabled || !item.id) return
     setStartOpen(false)
+    lastClickInside.current = false
     if (item.id === 'shutdown') { triggerShutdown(); return }
     const icon = ICONS.find((i) => i.id === item.id)
     if (icon) openWindow(icon.window)

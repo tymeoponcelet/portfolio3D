@@ -894,3 +894,57 @@
   background: rgba(0, 0, 128, 0.3);
   border-color: rgba(255, 255, 255, 0.5);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   TASKBAR — tabs style Henry (raised / active-checkerboard)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Conteneur extérieur du tab : bordure raised Win95 */
+.win95-tab-outer {
+  box-sizing:   border-box;
+  border:       1px solid var(--w-highlight);
+  border-bottom-color: var(--w-frame);
+  border-right-color:  var(--w-frame);
+  display:      flex;
+  flex-shrink:  0;
+}
+
+/* Conteneur extérieur actif (bouton enfoncé) */
+.win95-tab-active {
+  border-color: var(--w-frame);
+  border-bottom-color: var(--w-highlight);
+  border-right-color:  var(--w-highlight);
+}
+
+/* Conteneur intérieur du tab */
+.win95-tab-inner {
+  border:       1px solid var(--w-surface);
+  border-bottom-color: var(--w-shadow);
+  border-right-color:  var(--w-shadow);
+  padding:      1px 6px;
+  display:      flex;
+  align-items:  center;
+  min-height:   22px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Conteneur intérieur actif : checkerboard blanc 4×4 */
+.win95-tab-inner-active {
+  border-color: var(--w-shadow);
+  border-bottom-color: var(--w-surface);
+  border-right-color:  var(--w-surface);
+  background-image:
+    linear-gradient(45deg, #fff 25%, transparent 25%),
+    linear-gradient(-45deg, #fff 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #fff 75%),
+    linear-gradient(-45deg, transparent 75%, #fff 75%);
+  background-size:     4px 4px;
+  background-position: 0 0, 0 2px, 2px -2px, -2px 0px;
+}
+
+.win95-toolbar-text {
+  font-family: var(--w-font);
+  font-size:   11px;
+  white-space: nowrap;
+}

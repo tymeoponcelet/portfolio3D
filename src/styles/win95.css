@@ -809,3 +809,19 @@
 .win95-task-btn {
   transition: background 0.06s, border-color 0.06s;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   SHUTDOWN SEQUENCE — curseur clignotant terminal
+   ═══════════════════════════════════════════════════════════════ */
+
+.blinking-cursor {
+  width: 10px;
+  height: 16px;
+  background: white;
+  animation: blink-cursor 1s step-end infinite;
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}

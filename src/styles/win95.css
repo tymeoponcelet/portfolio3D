@@ -948,3 +948,77 @@
   font-size:   11px;
   white-space: nowrap;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   EXPLORER LAYOUT — commun aux 4 apps
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-explorer {
+  display:        flex;
+  flex-direction: column;
+  height:         100%;
+  font-family:    var(--w-font);
+  font-size:      11px;
+  overflow:       hidden;
+}
+
+/* Barre d'adresse */
+.win95-explorer-addr {
+  padding:       2px 4px;
+  border-bottom: 1px solid var(--w-dark);
+  display:       flex;
+  align-items:   center;
+  gap:           4px;
+  flex-shrink:   0;
+  background:    var(--w-surface);
+  color:         var(--w-darker);
+}
+
+.win95-explorer-addr-field {
+  flex:          1;
+  background:    #fff;
+  padding:       1px 4px;
+  box-shadow:    var(--border-sunken);
+  color:         #000;
+  font-family:   var(--w-font);
+  font-size:     11px;
+}
+
+/* Zone centrale : sidebar + panneau */
+.win95-explorer-body {
+  flex:     1;
+  display:  flex;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.win95-explorer-sidebar {
+  width:       140px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--w-dark);
+  overflow-y:  auto;
+  padding:     2px 0;
+  background:  #fff;
+}
+
+.win95-explorer-sidebar-item {
+  display:     flex;
+  align-items: center;
+  gap:         5px;
+  padding:     3px 6px;
+  cursor:      pointer;
+  white-space: nowrap;
+  overflow:    hidden;
+  text-overflow: ellipsis;
+}
+
+.win95-explorer-sidebar-item:hover  { background: var(--w-blue); color: #fff; }
+.win95-explorer-sidebar-item.active { background: var(--w-blue); color: #fff; }
+
+/* Panneau principal */
+.win95-explorer-main {
+  flex:       1;
+  overflow-y: auto;
+  background: #fff;
+  padding:    6px 8px;
+}

@@ -1038,7 +1038,7 @@
 
 .win95-progress-fill {
   height: 100%;
-  background: var(--w-blue);
+  background: #000080;
 }
 
 .win95-skill-row {
@@ -1059,54 +1059,55 @@
    SHOWCASE EXPLORER — HOME splash + sidebar layout
    ═══════════════════════════════════════════════════════════════ */
 
-/* HOME — plein écran centré */
+/* HOME — plein écran centré, fond blanc */
 .win95-showcase-home {
   display:         flex;
   align-items:     center;
   justify-content: center;
   height:          100%;
-  background:      var(--w-surface);
+  background:      #ffffff;
 }
 
 .win95-showcase-home-content {
   display:        flex;
   flex-direction: column;
   align-items:    center;
-  gap:            6px;
+  gap:            10px;
   text-align:     center;
 }
 
 .win95-showcase-home-title {
   font-family: var(--w-font);
-  font-size:   22px;
+  font-size:   32px;
   font-weight: bold;
-  color:       var(--w-black);
+  color:       #000080;
   margin:      0;
 }
 
 .win95-showcase-home-role {
   font-family: var(--w-font);
-  font-size:   13px;
-  color:       var(--w-darker);
+  font-size:   16px;
+  color:       #555;
   margin:      0;
 }
 
 .win95-showcase-home-sub {
   font-family: var(--w-font);
-  font-size:   10px;
-  color:       var(--w-darker);
+  font-size:   13px;
+  color:       #777;
   margin:      0 0 10px 0;
 }
 
 .win95-showcase-home-nav {
-  display: flex;
-  gap:     12px;
+  display:         flex;
+  gap:             20px;
+  justify-content: center;
 }
 
 .win95-showcase-home-link {
   font-family:     var(--w-font);
-  font-size:       11px;
-  color:           var(--w-blue);
+  font-size:       12px;
+  color:           #000080;
   text-decoration: underline;
   background:      none;
   border:          none;
@@ -1114,7 +1115,7 @@
   padding:         0;
 }
 
-.win95-showcase-home-link:hover { color: var(--w-black); }
+.win95-showcase-home-link:hover { color: #000; }
 
 /* Layout avec sidebar */
 .win95-showcase {
@@ -1126,8 +1127,8 @@
 .win95-showcase-sidebar {
   width:           130px;
   flex-shrink:     0;
-  border-right:    1px solid var(--w-dark);
-  background:      var(--w-surface);
+  border-right:    1px solid #d0d0d0;
+  background:      #ffffff;
   display:         flex;
   flex-direction:  column;
   padding:         8px 0 0 0;
@@ -1135,14 +1136,14 @@
 }
 
 .win95-showcase-sidebar-header {
-  padding:       0 8px 8px 8px;
-  border-bottom: 1px solid var(--w-dark);
+  padding:       0 10px 8px 10px;
+  border-bottom: 1px solid #d0d0d0;
   margin-bottom: 4px;
 }
 
 .win95-showcase-sidebar-name {
   font-family:  var(--w-font);
-  font-size:    12px;
+  font-size:    13px;
   font-weight:  bold;
   color:        var(--w-black);
   margin:       0;
@@ -1152,7 +1153,7 @@
 .win95-showcase-sidebar-brand {
   font-family: var(--w-font);
   font-size:   10px;
-  color:       var(--w-darker);
+  color:       #777;
   margin:      2px 0 0 0;
 }
 
@@ -1164,22 +1165,277 @@
 .win95-showcase-nav-item {
   font-family:     var(--w-font);
   font-size:       11px;
-  color:           var(--w-blue);
+  color:           var(--w-black);
   text-align:      left;
   background:      none;
   border:          none;
   cursor:          pointer;
-  padding:         4px 8px;
+  padding:         6px 10px;
   text-decoration: none;
 }
 
-.win95-showcase-nav-item:hover  { text-decoration: underline; }
-.win95-showcase-nav-item.active { color: var(--w-black); text-decoration: none; }
+.win95-showcase-nav-item:hover  { background: #f0f4ff; }
+.win95-showcase-nav-item.active {
+  color:           #000080;
+  text-decoration: underline;
+  font-weight:     bold;
+}
 
-/* Panel droit — contient le composant enfant (BioNotepad etc.) */
+/* Panel droit — contient le composant enfant */
 .win95-showcase-panel {
   flex:           1;
   display:        flex;
   flex-direction: column;
   overflow:       hidden;
+}
+
+/* ─── BioNotepad ─────────────────────────────────────────────── */
+
+.win95-bio {
+  display:        flex;
+  flex-direction: column;
+  height:         100%;
+  background:     #ffffff;
+}
+
+.win95-bio-body {
+  display:  flex;
+  flex:     1;
+  overflow: hidden;
+}
+
+.win95-bio-sidebar {
+  width:          110px;
+  flex-shrink:    0;
+  border-right:   1px solid #d0d0d0;
+  display:        flex;
+  flex-direction: column;
+  padding-top:    4px;
+  overflow-y:     auto;
+}
+
+.win95-bio-tab {
+  font-family:     var(--w-font);
+  font-size:       11px;
+  color:           var(--w-black);
+  text-align:      left;
+  background:      none;
+  border:          none;
+  border-left:     2px solid transparent;
+  cursor:          pointer;
+  padding:         6px 8px 6px 8px;
+  text-decoration: none;
+}
+
+.win95-bio-tab:hover  { background: #f0f4ff; }
+.win95-bio-tab.active {
+  color:       #000080;
+  font-weight: bold;
+  border-left: 2px solid #000080;
+}
+
+.win95-bio-panel {
+  flex:       1;
+  overflow-y: auto;
+  padding:    16px;
+}
+
+.win95-bio-section-title {
+  font-family:   var(--w-font);
+  font-size:     14px;
+  font-weight:   bold;
+  color:         #000080;
+  margin:        0 0 10px 0;
+}
+
+/* ─── ProjectsExplorer ───────────────────────────────────────── */
+
+.win95-projects {
+  display:        flex;
+  flex-direction: column;
+  height:         100%;
+  background:     #ffffff;
+}
+
+.win95-projects-body {
+  display:  flex;
+  flex:     1;
+  overflow: hidden;
+}
+
+.win95-projects-sidebar {
+  width:          110px;
+  flex-shrink:    0;
+  border-right:   1px solid #d0d0d0;
+  display:        flex;
+  flex-direction: column;
+  padding-top:    4px;
+  overflow-y:     auto;
+}
+
+.win95-projects-tab {
+  font-family:     var(--w-font);
+  font-size:       11px;
+  color:           var(--w-black);
+  text-align:      left;
+  background:      none;
+  border:          none;
+  border-left:     2px solid transparent;
+  cursor:          pointer;
+  padding:         6px 8px;
+  text-decoration: none;
+}
+
+.win95-projects-tab:hover  { background: #f0f4ff; }
+.win95-projects-tab.active {
+  color:       #000080;
+  font-weight: bold;
+  border-left: 2px solid #000080;
+}
+
+.win95-projects-panel {
+  flex:       1;
+  overflow-y: auto;
+  padding:    16px;
+}
+
+.win95-projects-file-row {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  padding:     4px 2px;
+  cursor:      pointer;
+  font-family: var(--w-font);
+  font-size:   11px;
+}
+
+.win95-projects-file-row:hover         { background: #f0f4ff; }
+.win95-projects-file-row.selected      { background: #d0d8ff; }
+
+.win95-projects-detail { display: flex; flex-direction: column; gap: 8px; }
+
+.win95-projects-title {
+  font-family: var(--w-font);
+  font-size:   14px;
+  font-weight: bold;
+  color:       #000080;
+}
+
+/* ─── SkillsApp ──────────────────────────────────────────────── */
+
+.win95-skills {
+  display:        flex;
+  flex-direction: column;
+  height:         100%;
+  background:     #ffffff;
+}
+
+.win95-skills-body {
+  display:  flex;
+  flex:     1;
+  overflow: hidden;
+}
+
+.win95-skills-sidebar {
+  width:          110px;
+  flex-shrink:    0;
+  border-right:   1px solid #d0d0d0;
+  display:        flex;
+  flex-direction: column;
+  padding-top:    4px;
+  overflow-y:     auto;
+}
+
+.win95-skills-tab {
+  font-family:     var(--w-font);
+  font-size:       11px;
+  color:           var(--w-black);
+  text-align:      left;
+  background:      none;
+  border:          none;
+  border-left:     2px solid transparent;
+  cursor:          pointer;
+  padding:         6px 8px;
+  text-decoration: none;
+}
+
+.win95-skills-tab:hover  { background: #f0f4ff; }
+.win95-skills-tab.active {
+  color:       #000080;
+  font-weight: bold;
+  border-left: 2px solid #000080;
+}
+
+.win95-skills-panel {
+  flex:       1;
+  overflow-y: auto;
+  padding:    16px;
+}
+
+.win95-skills-title {
+  font-family:   var(--w-font);
+  font-size:     14px;
+  font-weight:   bold;
+  color:         #000080;
+  margin:        0 0 12px 0;
+}
+
+/* ─── ContactApp ─────────────────────────────────────────────── */
+
+.win95-contact {
+  display:        flex;
+  flex-direction: column;
+  height:         100%;
+  background:     #ffffff;
+}
+
+.win95-contact-body {
+  display:  flex;
+  flex:     1;
+  overflow: hidden;
+}
+
+.win95-contact-sidebar {
+  width:          110px;
+  flex-shrink:    0;
+  border-right:   1px solid #d0d0d0;
+  display:        flex;
+  flex-direction: column;
+  padding-top:    4px;
+  overflow-y:     auto;
+}
+
+.win95-contact-tab {
+  font-family:     var(--w-font);
+  font-size:       11px;
+  color:           var(--w-black);
+  text-align:      left;
+  background:      none;
+  border:          none;
+  border-left:     2px solid transparent;
+  cursor:          pointer;
+  padding:         6px 8px;
+  text-decoration: none;
+}
+
+.win95-contact-tab:hover  { background: #f0f4ff; }
+.win95-contact-tab.active {
+  color:       #000080;
+  font-weight: bold;
+  border-left: 2px solid #000080;
+}
+
+.win95-contact-panel {
+  flex:       1;
+  overflow-y: auto;
+  padding:    16px;
+}
+
+.win95-contact-header {
+  display:        flex;
+  align-items:    center;
+  gap:            10px;
+  padding-bottom: 8px;
+  border-bottom:  1px solid #d0d0d0;
+  margin-bottom:  12px;
 }

@@ -1054,3 +1054,131 @@
   overflow:      hidden;
   text-overflow: ellipsis;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   SHOWCASE EXPLORER — HOME splash + sidebar layout
+   ═══════════════════════════════════════════════════════════════ */
+
+/* HOME — plein écran centré */
+.win95-showcase-home {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  height:          100%;
+  background:      var(--w-surface);
+}
+
+.win95-showcase-home-content {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            6px;
+  text-align:     center;
+}
+
+.win95-showcase-home-title {
+  font-family: var(--w-font);
+  font-size:   22px;
+  font-weight: bold;
+  color:       #000;
+  margin:      0;
+}
+
+.win95-showcase-home-role {
+  font-family: var(--w-font);
+  font-size:   13px;
+  color:       var(--w-darker);
+  margin:      0;
+}
+
+.win95-showcase-home-sub {
+  font-family: var(--w-font);
+  font-size:   10px;
+  color:       var(--w-darker);
+  margin:      0 0 10px 0;
+}
+
+.win95-showcase-home-nav {
+  display: flex;
+  gap:     12px;
+}
+
+.win95-showcase-home-link {
+  font-family:     var(--w-font);
+  font-size:       11px;
+  color:           var(--w-blue);
+  text-decoration: underline;
+  background:      none;
+  border:          none;
+  cursor:          pointer;
+  padding:         0;
+}
+
+.win95-showcase-home-link:hover { color: #000; }
+
+/* Layout avec sidebar */
+.win95-showcase {
+  display:  flex;
+  height:   100%;
+  overflow: hidden;
+}
+
+.win95-showcase-sidebar {
+  width:           130px;
+  flex-shrink:     0;
+  border-right:    1px solid var(--w-dark);
+  background:      var(--w-surface);
+  display:         flex;
+  flex-direction:  column;
+  padding:         8px 0 0 0;
+}
+
+.win95-showcase-sidebar-header {
+  padding:       0 8px 8px 8px;
+  border-bottom: 1px solid var(--w-dark);
+  margin-bottom: 4px;
+}
+
+.win95-showcase-sidebar-name {
+  font-family:  var(--w-font);
+  font-size:    12px;
+  font-weight:  bold;
+  color:        #000;
+  margin:       0;
+  line-height:  1.4;
+}
+
+.win95-showcase-sidebar-brand {
+  font-family: var(--w-font);
+  font-size:   10px;
+  color:       var(--w-darker);
+  margin:      2px 0 0 0;
+}
+
+.win95-showcase-sidebar-nav {
+  display:        flex;
+  flex-direction: column;
+}
+
+.win95-showcase-nav-item {
+  font-family:     var(--w-font);
+  font-size:       11px;
+  color:           var(--w-blue);
+  text-align:      left;
+  background:      none;
+  border:          none;
+  cursor:          pointer;
+  padding:         4px 8px;
+  text-decoration: none;
+}
+
+.win95-showcase-nav-item:hover  { text-decoration: underline; }
+.win95-showcase-nav-item.active { color: #000; text-decoration: none; }
+
+/* Panel droit — contient le composant enfant (BioNotepad etc.) */
+.win95-showcase-panel {
+  flex:           1;
+  display:        flex;
+  flex-direction: column;
+  overflow:       hidden;
+}

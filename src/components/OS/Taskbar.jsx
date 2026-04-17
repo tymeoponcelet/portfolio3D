@@ -14,14 +14,11 @@ import { ICONS }                                    from './Desktop'
 /* ── Éléments du menu Démarrer ─────────────────────────────────── */
 
 const START_ITEMS = [
-  { label: 'Biographie',  icon: '📄', id: 'bio'      },
-  { label: 'Mes Projets', icon: '📁', id: 'projects' },
-  { label: 'Compétences', icon: '⚙️', id: 'skills'   },
-  { label: 'Contact',     icon: '📬', id: 'contact'  },
+  { label: 'Portfolio', icon: '🖥️', id: 'showcase' },
   { divider: true },
-  { label: 'Aide',        icon: '❓', id: null, disabled: true },
+  { label: 'Aide',      icon: '❓', id: null, disabled: true },
   { divider: true },
-  { label: 'Arrêter…',   icon: '🔌', id: 'shutdown'  },
+  { label: 'Arrêter…', icon: '🔌', id: 'shutdown' },
 ]
 
 /* ── Utilitaire heure AM/PM ────────────────────────────────────── */

@@ -9,7 +9,11 @@ const SECTIONS = [
     path:  'C:\\Portfolio\\Biographie\\Formation',
     text: `BTS SIO — Services Informatiques aux Organisations
 Spécialisation SISR (Systèmes, Réseaux & Cybersécurité)
-Pôle Sup DE LA SALLE — Promotion 2025-2026`,
+Pôle Sup DE LA SALLE — Promotion 2025-2026
+
+Baccalauréat, Spécialité Maths/AMC
+Mention Assez Bien — Lycée Jean Brito
+Promotion 2023-2024`,
   },
   {
     id:    'objectif',
@@ -25,28 +29,21 @@ stage dans les domaines suivants :
   • Supervision et monitoring`,
   },
   {
-    id:    'competences',
-    icon:  '🔧',
-    label: 'Compétences',
-    path:  'C:\\Portfolio\\Biographie\\Compétences',
-    text: `INFRASTRUCTURE & RÉSEAUX
-  ✓ Windows Server / Active Directory
-  ✓ Cisco Packet Tracer (routage, VLANs)
-  ✓ Adressage IP / VLSM
-  ✓ pfSense / VyOS (firewall, NAT, routage)
-  ✓ VirtualBox
+    id:    'experience',
+    icon:  '💼',
+    label: 'Expérience',
+    path:  'C:\\Portfolio\\Biographie\\Expérience',
+    text: `ÉQUIPIER — McDonald's, Bain de Bretagne
+Juillet-Août 2024 · Février-Août 2025
+  • Travail en équipe et coordination
+  • Rigueur et respect des procédures
+  • Normes d'hygiène et sécurité alimentaire
 
-CYBERSÉCURITÉ
-  ✓ Kali Linux
-  ✓ Wireshark (analyse réseau)
-  ✓ Hashcat / Hydra (audit de mots de passe)
-  ✓ Chiffrement / Hachage
-
-SYSTÈMES LINUX
-  ✓ Debian / Ubuntu Server
-  ✓ Gestion utilisateurs & droits
-  ✓ GLPI (gestion de parc)
-  ✓ Zabbix + Grafana (supervision)`,
+STAGE — Cabinet Kaliame (expert-comptable)
+Février 2023 — 3 jours
+  • Tri, classement et vérification de
+    documents comptables
+  • Organisation et rigueur administrative`,
   },
   {
     id:    'contact',
@@ -55,7 +52,8 @@ SYSTÈMES LINUX
     path:  'C:\\Portfolio\\Biographie\\Contact',
     text: `Email   : tymeo.poncelet@gmail.com
 Tél     : 06 10 25 32 34
-LinkedIn: linkedin.com/in/tyméo-poncelet-83b667383`,
+LinkedIn: linkedin.com/in/tyméo-poncelet-83b667383
+GitHub  : github.com/tymeoponcelet`,
   },
 ]
 

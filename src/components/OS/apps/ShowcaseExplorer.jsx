@@ -13,22 +13,14 @@ const NAV = [
   { id: 'contact',  label: 'CONTACT'     },
 ]
 
-function getPanel(section) {
-  switch (section) {
-    case 'bio':      return <BioNotepad />
-    case 'projects': return <ProjectsExplorer />
-    case 'skills':   return <SkillsApp />
-    case 'contact':  return <ContactApp />
-    default:         return null
-  }
-}
-
 export function ShowcaseExplorer() {
   const [section, setSection] = useState('home')
+  const isHome = section === 'home'
 
-  if (section === 'home') {
-    return (
-      <div className="win95-showcase-home">
+  return (
+    <>
+      {/* HOME splash — always mounted, hidden when section is not home */}
+      <div className="win95-showcase-home" style={{ display: isHome ? undefined : 'none' }}>
         <div className="win95-showcase-home-content">
           <h1 className="win95-showcase-home-title">Tyméo Poncelet</h1>
           <p className="win95-showcase-home-role">Student</p>
@@ -46,31 +38,35 @@ export function ShowcaseExplorer() {
           </nav>
         </div>
       </div>
-    )
-  }
 
-  return (
-    <div className="win95-showcase">
-      <div className="win95-showcase-sidebar">
-        <div className="win95-showcase-sidebar-header">
-          <p className="win95-showcase-sidebar-name">Tyméo<br />Poncelet</p>
-          <p className="win95-showcase-sidebar-brand">Portfolio</p>
+      {/* Sidebar layout — always mounted, hidden when on HOME */}
+      <div className="win95-showcase" style={{ display: isHome ? 'none' : undefined }}>
+        <div className="win95-showcase-sidebar">
+          <div className="win95-showcase-sidebar-header">
+            <p className="win95-showcase-sidebar-name">Tyméo<br />Poncelet</p>
+            <p className="win95-showcase-sidebar-brand">Portfolio</p>
+          </div>
+          <nav className="win95-showcase-sidebar-nav">
+            {NAV.map((n) => (
+              <button
+                key={n.id}
+                className={`win95-showcase-nav-item${section === n.id ? ' active' : ''}`}
+                onClick={() => setSection(n.id)}
+              >
+                {n.label}
+              </button>
+            ))}
+          </nav>
         </div>
-        <nav className="win95-showcase-sidebar-nav">
-          {NAV.map((n) => (
-            <button
-              key={n.id}
-              className={`win95-showcase-nav-item${section === n.id ? ' active' : ''}`}
-              onClick={() => setSection(n.id)}
-            >
-              {section === n.id ? '○ ' : ''}{n.label}
-            </button>
-          ))}
-        </nav>
+        <div className="win95-showcase-panel">
+          {/* All panels always mounted — display:contents passes layout to parent flex,
+              display:none hides without unmounting (preserves child state) */}
+          <div style={{ display: section === 'bio'      ? 'contents' : 'none' }}><BioNotepad /></div>
+          <div style={{ display: section === 'projects' ? 'contents' : 'none' }}><ProjectsExplorer /></div>
+          <div style={{ display: section === 'skills'   ? 'contents' : 'none' }}><SkillsApp /></div>
+          <div style={{ display: section === 'contact'  ? 'contents' : 'none' }}><ContactApp /></div>
+        </div>
       </div>
-      <div className="win95-showcase-panel">
-        {getPanel(section)}
-      </div>
-    </div>
+    </>
   )
 }

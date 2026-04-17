@@ -1080,7 +1080,7 @@
   font-family: var(--w-font);
   font-size:   22px;
   font-weight: bold;
-  color:       #000;
+  color:       var(--w-black);
   margin:      0;
 }
 
@@ -1114,7 +1114,7 @@
   padding:         0;
 }
 
-.win95-showcase-home-link:hover { color: #000; }
+.win95-showcase-home-link:hover { color: var(--w-black); }
 
 /* Layout avec sidebar */
 .win95-showcase {
@@ -1131,6 +1131,7 @@
   display:         flex;
   flex-direction:  column;
   padding:         8px 0 0 0;
+  overflow-y:      auto;
 }
 
 .win95-showcase-sidebar-header {
@@ -1143,7 +1144,7 @@
   font-family:  var(--w-font);
   font-size:    12px;
   font-weight:  bold;
-  color:        #000;
+  color:        var(--w-black);
   margin:       0;
   line-height:  1.4;
 }
@@ -1173,7 +1174,7 @@
 }
 
 .win95-showcase-nav-item:hover  { text-decoration: underline; }
-.win95-showcase-nav-item.active { color: #000; text-decoration: none; }
+.win95-showcase-nav-item.active { color: var(--w-black); text-decoration: none; }
 
 /* Panel droit — contient le composant enfant (BioNotepad etc.) */
 .win95-showcase-panel {

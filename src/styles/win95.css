@@ -1021,4 +1021,36 @@
   overflow-y: auto;
   background: #fff;
   padding:    6px 8px;
+  color:      #000;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SKILLS — barre de progression Win95 (sunken + fill bleu)
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-progress-track {
+  flex: 1;
+  height: 12px;
+  box-shadow: var(--border-sunken);
+  background: #fff;
+  overflow: hidden;
+}
+
+.win95-progress-fill {
+  height: 100%;
+  background: var(--w-blue);
+}
+
+.win95-skill-row {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  padding:     2px 0;
+}
+
+.win95-skill-name {
+  min-width:     140px;
+  white-space:   nowrap;
+  overflow:      hidden;
+  text-overflow: ellipsis;
 }

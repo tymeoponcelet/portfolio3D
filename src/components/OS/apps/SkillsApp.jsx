@@ -1,8 +1,12 @@
 // src/components/OS/apps/SkillsApp.jsx
+import { useState } from 'react'
 
-const SKILL_SECTIONS = [
+const CATEGORIES = [
   {
-    title: 'Infrastructure & Réseaux',
+    id:    'infra',
+    icon:  '🖧',
+    label: 'Infrastructure',
+    path:  'C:\\Panneau de configuration\\Infrastructure',
     items: [
       { name: 'Windows Server / AD',   level: 4, max: 5 },
       { name: 'Cisco / Packet Tracer', level: 3, max: 5 },
@@ -12,7 +16,10 @@ const SKILL_SECTIONS = [
     ],
   },
   {
-    title: 'Cybersécurité',
+    id:    'secu',
+    icon:  '🔐',
+    label: 'Cybersécurité',
+    path:  'C:\\Panneau de configuration\\Cybersécurité',
     items: [
       { name: 'Kali Linux',        level: 3, max: 5 },
       { name: 'Wireshark',         level: 3, max: 5 },
@@ -21,7 +28,10 @@ const SKILL_SECTIONS = [
     ],
   },
   {
-    title: 'Systèmes Linux',
+    id:    'linux',
+    icon:  '🐧',
+    label: 'Systèmes Linux',
+    path:  'C:\\Panneau de configuration\\Linux',
     items: [
       { name: 'Debian / Ubuntu',   level: 4, max: 5 },
       { name: 'GLPI',              level: 3, max: 5 },
@@ -31,37 +41,66 @@ const SKILL_SECTIONS = [
   },
 ]
 
-function Bar({ level, max }) {
+function ProgressBar({ level, max }) {
   return (
-    <span style={{ fontFamily: '"Courier New", monospace', fontSize: 11 }}>
-      {'█'.repeat(level)}{'░'.repeat(max - level)}
-    </span>
+    <div className="win95-progress-track">
+      <div
+        className="win95-progress-fill"
+        style={{ width: `${(level / max) * 100}%` }}
+      />
+    </div>
   )
 }
 
 export function SkillsApp() {
+  const [active, setActive] = useState(CATEGORIES[0])
+
   return (
-    <div style={{
-      padding: '8px 10px', fontFamily: 'var(--w-font)', fontSize: 11,
-      display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', height: '100%',
-    }}>
-      {SKILL_SECTIONS.map((section) => (
-        <div key={section.title}>
-          <div style={{
-            fontWeight: 'bold', fontSize: 11, marginBottom: 4,
-            borderBottom: '1px solid var(--w-dark)', paddingBottom: 2,
-            color: '#000080',
-          }}>
-            {section.title}
-          </div>
-          {section.items.map((item) => (
-            <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '1px 0' }}>
-              <span style={{ minWidth: 160 }}>{item.name}</span>
-              <Bar level={item.level} max={item.max} />
+    <div className="win95-explorer">
+
+      {/* Barre d'adresse */}
+      <div className="win95-explorer-addr">
+        <span>Adresse :</span>
+        <div className="win95-explorer-addr-field">{active.path}</div>
+      </div>
+
+      {/* Corps */}
+      <div className="win95-explorer-body">
+
+        {/* Sidebar */}
+        <div className="win95-explorer-sidebar">
+          {CATEGORIES.map((cat) => (
+            <div
+              key={cat.id}
+              className={`win95-explorer-sidebar-item${active.id === cat.id ? ' active' : ''}`}
+              onClick={() => setActive(cat)}
+            >
+              <span style={{ fontSize: 13 }}>{cat.icon}</span>
+              <span>{cat.label}</span>
             </div>
           ))}
         </div>
-      ))}
+
+        {/* Panneau */}
+        <div className="win95-explorer-main">
+          {active.items.map((item) => (
+            <div key={item.name} className="win95-skill-row">
+              <span className="win95-skill-name">{item.name}</span>
+              <ProgressBar level={item.level} max={item.max} />
+              <span style={{ minWidth: 28, textAlign: 'right', color: 'var(--w-darker)' }}>
+                {item.level}/{item.max}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Statusbar */}
+      <div className="win95-statusbar">
+        <span className="win95-statusbar-field">{active.items.length} compétence(s)</span>
+        <span className="win95-statusbar-field">{active.label}</span>
+      </div>
+
     </div>
   )
 }

@@ -1,12 +1,15 @@
-// src/components/OS/Desktop.jsx
 import { useRef, useCallback, useState, useEffect } from 'react'
 import { AnimatePresence }                          from 'framer-motion'
 import { icons }                                    from '../../assets/icons/index.js'
 import { useOSStore }                               from '../../stores/osStore'
+import { useFsStore }                               from '../../stores/fsStore'
 import { Window }                                   from '../Window/Window'
 import { Taskbar }                                  from './Taskbar'
 import { ShowcaseExplorer }                         from './apps/ShowcaseExplorer'
+import { FileExplorer }                             from './apps/FileExplorer'
+import { Notepad }                                  from './apps/Notepad'
 import { ContextMenu, SystemProperties }            from './ContextMenu'
+import { DynamicIcon }                              from './DynamicIcon'
 
 const SHOWCASE_WINDOW = {
   appId:   'showcase',
@@ -18,11 +21,11 @@ const SHOWCASE_WINDOW = {
 }
 
 const PROPERTIES_WINDOW = {
-  appId:  'properties',
-  title:  'Propriétés système',
-  icon:   '🖥️',
-  width:  320,
-  height: 280,
+  appId:   'properties',
+  title:   'Propriétés système',
+  icon:    '🖥️',
+  width:   320,
+  height:  280,
   content: <SystemProperties />,
 }
 
@@ -75,11 +78,29 @@ function DesktopShortcut({ entry, isSelected, onSelect, onOpen }) {
 export function Desktop() {
   const windows    = useOSStore((s) => s.windows)
   const openWindow = useOSStore((s) => s.openWindow)
+
+  const fsItems    = useFsStore((s) => s.items)
+  const createItem = useFsStore((s) => s.createItem)
+  const renameItem = useFsStore((s) => s.renameItem)
+
+  const desktopFsItems = fsItems.filter((i) => i.parentId === null)
+
   const [selected,     setSelected]     = useState(null)
-  const [contextMenu,  setContextMenu]  = useState(null) // { x, y } | null
+  const [selectedFsId, setSelectedFsId] = useState(null)
+  const [renamingId,   setRenamingId]   = useState(null)
+  const [contextMenu,  setContextMenu]  = useState(null)
   const desktopRef = useRef(null)
 
   useEffect(() => { openWindow(SHOWCASE_WINDOW) }, []) // eslint-disable-line
+
+  useEffect(() => {
+    if (!selectedFsId) return
+    const handler = (e) => {
+      if (e.key === 'F2') { e.preventDefault(); setRenamingId(selectedFsId) }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [selectedFsId])
 
   const contentRefs = useRef({})
   windows.forEach((w) => {
@@ -102,15 +123,61 @@ export function Desktop() {
     setContextMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top })
   }, [])
 
-  const openProperties = useCallback(() => {
-    openWindow(PROPERTIES_WINDOW)
+  const openProperties = useCallback(() => { openWindow(PROPERTIES_WINDOW) }, [openWindow])
+
+  const handleCreateFolder = useCallback(() => {
+    const id = createItem('folder', null)
+    setRenamingId(id)
+  }, [createItem])
+
+  const handleCreateFile = useCallback(() => {
+    const id = createItem('file', null)
+    setRenamingId(id)
+  }, [createItem])
+
+  const handleOpenFsItem = useCallback((item) => {
+    if (item.type === 'folder') {
+      openWindow({
+        appId:   `explorer-${item.id}`,
+        title:   item.name,
+        icon:    '📁',
+        width:   480,
+        height:  320,
+        content: <FileExplorer folderId={item.id} folderName={item.name} />,
+      })
+    } else {
+      openWindow({
+        appId:   `notepad-${item.id}`,
+        title:   `${item.name} — Bloc-notes`,
+        icon:    '📄',
+        width:   400,
+        height:  300,
+        content: <Notepad fileId={item.id} />,
+      })
+    }
   }, [openWindow])
+
+  const handleFsSelect    = useCallback((id) => { setSelectedFsId(id); setSelected(null) }, [])
+  const handleRenameStart = useCallback((id) => setRenamingId(id), [])
+
+  const handleRenameConfirm = useCallback((id, name) => {
+    renameItem(id, name)
+    setRenamingId(null)
+  }, [renameItem])
+
+  const handleRenameCancel = useCallback(() => setRenamingId(null), [])
+
+  const handleDesktopClick = useCallback(() => {
+    setSelected(null)
+    setSelectedFsId(null)
+    setRenamingId(null)
+  }, [])
 
   return (
     <div
       ref={desktopRef}
       className="win95-desktop"
-      onClick={() => setSelected(null)}
+      onClick={handleDesktopClick}
       onContextMenu={handleContextMenu}
     >
       {ICONS.map((icon) => (
@@ -120,6 +187,21 @@ export function Desktop() {
           isSelected={selected === icon.id}
           onSelect={() => setSelected(icon.id)}
           onOpen={() => handleOpen(icon)}
+        />
+      ))}
+
+      {desktopFsItems.map((item, index) => (
+        <DynamicIcon
+          key={item.id}
+          item={item}
+          style={{ top: 90 + index * 72, left: 10 }}
+          isSelected={selectedFsId === item.id}
+          isRenaming={renamingId === item.id}
+          onSelect={handleFsSelect}
+          onOpen={handleOpenFsItem}
+          onRenameStart={handleRenameStart}
+          onRenameConfirm={handleRenameConfirm}
+          onRenameCancel={handleRenameCancel}
         />
       ))}
 
@@ -138,6 +220,8 @@ export function Desktop() {
           containerRef={desktopRef}
           onClose={() => setContextMenu(null)}
           onOpenProperties={openProperties}
+          onCreateFolder={handleCreateFolder}
+          onCreateFile={handleCreateFile}
         />
       )}
 

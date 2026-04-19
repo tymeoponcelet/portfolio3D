@@ -1835,3 +1835,34 @@ button {
   display: block;
   margin: 0 auto;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   FILE EXPLORER
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-fileexplorer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--w-surface);
+}
+
+.win95-fileexplorer-addressbar {
+  background: var(--w-surface);
+  box-shadow: var(--border-sunken);
+  margin: 4px 4px 2px;
+  padding: 2px 6px;
+  font-family: var(--w-font);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.win95-fileexplorer-body {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  background: #ffffff;
+  box-shadow: var(--border-sunken);
+  margin: 0 4px 4px;
+}

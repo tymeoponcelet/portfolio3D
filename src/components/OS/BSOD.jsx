@@ -32,8 +32,14 @@ Contactez votre administrateur système ou l'assistance technique.`
 export function BSOD({ onRecover }) {
   useEffect(() => {
     win95sounds.bsod()
-    const dismiss = () => { clearTimeout(tid); onRecover() }
-    const tid = setTimeout(onRecover, 8000)
+    let dismissed = false
+    const dismiss = () => {
+      if (dismissed) return
+      dismissed = true
+      clearTimeout(tid)
+      onRecover()
+    }
+    const tid = setTimeout(dismiss, 8000)
     window.addEventListener('click',   dismiss, { once: true })
     window.addEventListener('keydown', dismiss, { once: true })
     return () => {
@@ -44,7 +50,7 @@ export function BSOD({ onRecover }) {
   }, [onRecover])
 
   return (
-    <div style={{
+    <div role="alert" style={{
       position: 'absolute', inset: 0, zIndex: 999999,
       background: '#0000AA', color: '#ffffff',
       fontFamily: '"Courier New", Courier, monospace',

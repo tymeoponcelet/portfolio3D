@@ -185,7 +185,7 @@ export function Desktop() {
           key={icon.id}
           entry={icon}
           isSelected={selected === icon.id}
-          onSelect={() => setSelected(icon.id)}
+          onSelect={() => { setSelected(icon.id); setSelectedFsId(null) }}
           onOpen={() => handleOpen(icon)}
         />
       ))}

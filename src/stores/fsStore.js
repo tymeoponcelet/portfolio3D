@@ -1,4 +1,3 @@
-// src/stores/fsStore.js
 import { create } from 'zustand'
 
 function uniqueName(items, parentId, baseName) {
@@ -15,22 +14,40 @@ export const useFsStore = create((set, get) => ({
   items: [],
 
   createItem: (type, parentId) => {
-    const { items } = get()
     const base = type === 'folder'
       ? 'Nouveau dossier'
       : 'Nouveau document texte.txt'
-    const name = uniqueName(items, parentId, base)
     const id   = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    set((s) => ({ items: [...s.items, { id, type, name, parentId: parentId ?? null, content: '' }] }))
+    set((s) => {
+      const name = uniqueName(s.items, parentId, base)
+      return {
+        items: [...s.items, {
+          id,
+          type,
+          name,
+          parentId: parentId ?? null,
+          ...(type === 'file' ? { content: '' } : {}),
+        }]
+      }
+    })
     return id
   },
 
   renameItem: (id, name) => {
     const trimmed = name.trim()
     if (!trimmed) return
-    set((s) => ({
-      items: s.items.map((i) => i.id === id ? { ...i, name: trimmed } : i),
-    }))
+    set((s) => {
+      const item = s.items.find((i) => i.id === id)
+      if (!item) return s
+      const siblings = s.items.filter((i) => i.parentId === item.parentId && i.id !== id)
+      let finalName = trimmed
+      if (siblings.some((i) => i.name === trimmed)) {
+        let n = 2
+        while (siblings.some((i) => i.name === `${trimmed} (${n})`)) n++
+        finalName = `${trimmed} (${n})`
+      }
+      return { items: s.items.map((i) => i.id === id ? { ...i, name: finalName } : i) }
+    })
   },
 
   updateContent: (id, content) => {
@@ -46,8 +63,9 @@ export const useFsStore = create((set, get) => ({
            .forEach((c) => result.push(...collect(items, c.id)))
       return result
     }
-    const { items } = get()
-    const toDelete = new Set(collect(items, id))
-    set(() => ({ items: items.filter((i) => !toDelete.has(i.id)) }))
+    set((s) => {
+      const toDelete = new Set(collect(s.items, id))
+      return { items: s.items.filter((i) => !toDelete.has(i.id)) }
+    })
   },
 }))

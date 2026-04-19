@@ -13,11 +13,11 @@ function uniqueName(items, parentId, baseName) {
 export const useFsStore = create((set, get) => ({
   items: [],
 
-  createItem: (type, parentId) => {
+  createItem: (type, parentId, pos = null) => {
     const base = type === 'folder'
       ? 'Nouveau dossier'
       : 'Nouveau document texte.txt'
-    const id   = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     set((s) => {
       const name = uniqueName(s.items, parentId, base)
       return {
@@ -26,8 +26,9 @@ export const useFsStore = create((set, get) => ({
           type,
           name,
           parentId: parentId ?? null,
+          pos:      pos ?? null,
           ...(type === 'file' ? { content: '' } : {}),
-        }]
+        }],
       }
     })
     return id
@@ -53,6 +54,18 @@ export const useFsStore = create((set, get) => ({
   updateContent: (id, content) => {
     set((s) => ({
       items: s.items.map((i) => i.id === id ? { ...i, content } : i),
+    }))
+  },
+
+  moveItem: (id, x, y) => {
+    set((s) => ({
+      items: s.items.map((i) => i.id === id ? { ...i, pos: { x, y } } : i),
+    }))
+  },
+
+  setParent: (id, parentId) => {
+    set((s) => ({
+      items: s.items.map((i) => i.id === id ? { ...i, parentId, pos: null } : i),
     }))
   },
 

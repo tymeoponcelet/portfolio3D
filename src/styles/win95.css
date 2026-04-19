@@ -1866,3 +1866,46 @@ button {
   box-shadow: var(--border-sunken);
   margin: 0 4px 4px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   DRAG GHOST
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  opacity: 0.65;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 72px;
+  padding: 4px;
+  user-select: none;
+}
+
+.win95-drag-ghost img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.win95-drag-ghost span {
+  font-family: var(--w-font);
+  font-size: 11px;
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #000000;
+  margin-top: 2px;
+  text-align: center;
+  max-width: 68px;
+  overflow-wrap: break-word;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DROP TARGET
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-shortcut.drop-target {
+  outline: 2px dotted #000080;
+  background: rgba(0, 0, 128, 0.15);
+}

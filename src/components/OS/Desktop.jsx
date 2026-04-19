@@ -10,6 +10,7 @@ import { FileExplorer }                             from './apps/FileExplorer'
 import { Notepad }                                  from './apps/Notepad'
 import { ContextMenu, SystemProperties }            from './ContextMenu'
 import { DynamicIcon }                              from './DynamicIcon'
+import { IconContextMenu }                          from './IconContextMenu'
 
 const SHOWCASE_WINDOW = {
   appId:   'showcase',
@@ -85,10 +86,12 @@ export function Desktop() {
 
   const desktopFsItems = fsItems.filter((i) => i.parentId === null)
 
-  const [selected,     setSelected]     = useState(null)
-  const [selectedFsId, setSelectedFsId] = useState(null)
-  const [renamingId,   setRenamingId]   = useState(null)
-  const [contextMenu,  setContextMenu]  = useState(null)
+  const [selected,        setSelected]        = useState(null)
+  const [selectedFsId,    setSelectedFsId]    = useState(null)
+  const [renamingId,      setRenamingId]      = useState(null)
+  const [contextMenu,     setContextMenu]     = useState(null)
+  const [drag,            setDrag]            = useState(null)
+  const [iconContextMenu, setIconContextMenu] = useState(null)
   const desktopRef = useRef(null)
 
   useEffect(() => { openWindow(SHOWCASE_WINDOW) }, []) // eslint-disable-line
@@ -101,6 +104,45 @@ export function Desktop() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [selectedFsId])
+
+  /* Global drag listeners — re-registered only when drag id changes */
+  useEffect(() => {
+    if (!drag) return
+    const { id, offsetX, offsetY } = drag
+
+    const onMove = (e) => {
+      const el         = document.elementFromPoint(e.clientX, e.clientY)
+      const btn        = el?.closest('[data-itemid]')
+      const tid        = btn?.dataset.itemid
+      const tItem      = tid ? useFsStore.getState().items.find((i) => i.id === tid) : null
+      const dropTarget = (tItem?.type === 'folder' && tid !== id) ? tid : null
+      setDrag((d) => d ? { ...d, clientX: e.clientX, clientY: e.clientY, dropTarget } : null)
+    }
+
+    const onUp = (e) => {
+      const el    = document.elementFromPoint(e.clientX, e.clientY)
+      const btn   = el?.closest('[data-itemid]')
+      const tid   = btn?.dataset.itemid
+      const tItem = tid ? useFsStore.getState().items.find((i) => i.id === tid) : null
+
+      if (tItem?.type === 'folder' && tid !== id) {
+        useFsStore.getState().setParent(id, tid)
+      } else {
+        const rect = desktopRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 }
+        const x    = Math.max(0, e.clientX - rect.left - offsetX)
+        const y    = Math.max(0, e.clientY - rect.top  - offsetY)
+        useFsStore.getState().moveItem(id, x, y)
+      }
+      setDrag(null)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup',   onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup',   onUp)
+    }
+  }, [drag?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const contentRefs = useRef({})
   windows.forEach((w) => {
@@ -119,6 +161,7 @@ export function Desktop() {
   const handleContextMenu = useCallback((e) => {
     e.preventDefault()
     if (e.target.closest('.win95-window')) return
+    setIconContextMenu(null)
     const rect = desktopRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 }
     setContextMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top })
   }, [])
@@ -126,14 +169,14 @@ export function Desktop() {
   const openProperties = useCallback(() => { openWindow(PROPERTIES_WINDOW) }, [openWindow])
 
   const handleCreateFolder = useCallback(() => {
-    const id = createItem('folder', null)
+    const id = createItem('folder', null, { x: 10, y: 90 + desktopFsItems.length * 72 })
     setRenamingId(id)
-  }, [createItem])
+  }, [createItem, desktopFsItems.length])
 
   const handleCreateFile = useCallback(() => {
-    const id = createItem('file', null)
+    const id = createItem('file', null, { x: 10, y: 90 + desktopFsItems.length * 72 })
     setRenamingId(id)
-  }, [createItem])
+  }, [createItem, desktopFsItems.length])
 
   const handleOpenFsItem = useCallback((item) => {
     if (item.type === 'folder') {
@@ -167,11 +210,25 @@ export function Desktop() {
 
   const handleRenameCancel = useCallback(() => setRenamingId(null), [])
 
+  const handleDragStart = useCallback((item, offX, offY, clientX, clientY) => {
+    setSelectedFsId(item.id)
+    setDrag({ id: item.id, offsetX: offX, offsetY: offY, clientX, clientY, dropTarget: null })
+  }, [])
+
+  const handleIconContextMenu = useCallback((item, clientX, clientY) => {
+    setSelectedFsId(item.id)
+    setContextMenu(null)
+    setIconContextMenu({ item, clientX, clientY })
+  }, [])
+
   const handleDesktopClick = useCallback(() => {
     setSelected(null)
     setSelectedFsId(null)
     setRenamingId(null)
+    setIconContextMenu(null)
   }, [])
+
+  const draggedItem = drag ? fsItems.find((i) => i.id === drag.id) : null
 
   return (
     <div
@@ -190,18 +247,25 @@ export function Desktop() {
         />
       ))}
 
-      {desktopFsItems.map((item, index) => (
+      {desktopFsItems.map((item) => (
         <DynamicIcon
           key={item.id}
           item={item}
-          style={{ top: 90 + index * 72, left: 10 }}
+          style={{
+            top:     item.pos?.y ?? 0,
+            left:    item.pos?.x ?? 0,
+            opacity: drag?.id === item.id ? 0.3 : 1,
+          }}
           isSelected={selectedFsId === item.id}
           isRenaming={renamingId === item.id}
+          isDropTarget={drag?.dropTarget === item.id}
           onSelect={handleFsSelect}
           onOpen={handleOpenFsItem}
           onRenameStart={handleRenameStart}
           onRenameConfirm={handleRenameConfirm}
           onRenameCancel={handleRenameCancel}
+          onDragStart={handleDragStart}
+          onContextMenu={handleIconContextMenu}
         />
       ))}
 
@@ -223,6 +287,29 @@ export function Desktop() {
           onCreateFolder={handleCreateFolder}
           onCreateFile={handleCreateFile}
         />
+      )}
+
+      {iconContextMenu && (
+        <IconContextMenu
+          clientX={iconContextMenu.clientX}
+          clientY={iconContextMenu.clientY}
+          item={iconContextMenu.item}
+          onRename={(id) => { setRenamingId(id); setSelectedFsId(id) }}
+          onClose={() => setIconContextMenu(null)}
+        />
+      )}
+
+      {drag && draggedItem && (
+        <div
+          className="win95-drag-ghost"
+          style={{ left: drag.clientX - drag.offsetX, top: drag.clientY - drag.offsetY }}
+        >
+          <img
+            src={draggedItem.type === 'folder' ? '/png/folder.png' : '/png/txtfile.png'}
+            alt=""
+          />
+          <span>{draggedItem.name}</span>
+        </div>
       )}
 
       <Taskbar />

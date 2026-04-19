@@ -10,6 +10,7 @@ import { AnimatePresence, motion }                  from 'framer-motion'
 import { useOSStore }                               from '../../stores/osStore'
 import { icons }                                    from '../../assets/icons/index.js'
 import { ICONS }                                    from './Desktop'
+import { win95sounds } from '../../utils/win95sounds'
 
 /* ── Éléments du menu Démarrer ─────────────────────────────────── */
 
@@ -61,12 +62,14 @@ export function Taskbar() {
   }, [onGlobalClick])
 
   const toggleStart = () => {
+    win95sounds.click()
     lastClickInside.current = true
     setStartOpen((o) => !o)
   }
 
   const handleStartItem = (item) => {
     if (item.disabled || !item.id) return
+    win95sounds.click()
     setStartOpen(false)
     lastClickInside.current = false
     if (item.id === 'shutdown') { triggerShutdown(); return }

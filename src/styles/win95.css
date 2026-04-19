@@ -1796,3 +1796,42 @@ button {
   margin: 2px 4px;
   box-shadow: 0 1px 0 var(--w-highlight);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   NOTEPAD
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-notepad-textarea {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 4px 6px;
+  font-family: var(--w-font-mono);
+  font-size: 12px;
+  background: #ffffff;
+  color: #000000;
+  display: block;
+  box-sizing: border-box;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENAME INPUT (inline dans DynamicIcon)
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-rename-input {
+  width: 68px;
+  background: #0000AA;
+  color: #ffffff;
+  border: 1px dotted #ffffff;
+  font-family: var(--w-font);
+  font-size: 11px;
+  text-align: center;
+  padding: 1px 2px;
+  outline: none;
+  line-height: 1.3;
+  word-break: break-all;
+  display: block;
+  margin: 0 auto;
+}

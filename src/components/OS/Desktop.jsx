@@ -6,16 +6,24 @@ import { useOSStore }                               from '../../stores/osStore'
 import { Window }                                   from '../Window/Window'
 import { Taskbar }                                  from './Taskbar'
 import { ShowcaseExplorer }                         from './apps/ShowcaseExplorer'
-
-/* ── Registre de la fenêtre Showcase ─────────────────────────── */
+import { ContextMenu, SystemProperties }            from './ContextMenu'
 
 const SHOWCASE_WINDOW = {
   appId:   'showcase',
   title:   'Portfolio — Tyméo Poncelet',
   icon:    '🖥️',
-  width:   640,
-  height:  480,
+  width:   780,
+  height:  540,
   content: <ShowcaseExplorer />,
+}
+
+const PROPERTIES_WINDOW = {
+  appId:  'properties',
+  title:  'Propriétés système',
+  icon:   '🖥️',
+  width:  320,
+  height: 280,
+  content: <SystemProperties />,
 }
 
 export const ICONS = [
@@ -27,8 +35,6 @@ export const ICONS = [
     window:  SHOWCASE_WINDOW,
   },
 ]
-
-/* ── DesktopShortcut ─────────────────────────────────────────── */
 
 function DesktopShortcut({ entry, isSelected, onSelect, onOpen }) {
   const { iconSrc, label, pos } = entry
@@ -66,17 +72,14 @@ function DesktopShortcut({ entry, isSelected, onSelect, onOpen }) {
   )
 }
 
-/* ── Desktop ─────────────────────────────────────────────────── */
-
 export function Desktop() {
   const windows    = useOSStore((s) => s.windows)
   const openWindow = useOSStore((s) => s.openWindow)
-  const [selected, setSelected] = useState(null)
+  const [selected,     setSelected]     = useState(null)
+  const [contextMenu,  setContextMenu]  = useState(null) // { x, y } | null
+  const desktopRef = useRef(null)
 
-  /* Auto-ouverture du ShowcaseExplorer au boot */
-  useEffect(() => {
-    openWindow(SHOWCASE_WINDOW)
-  }, []) // eslint-disable-line
+  useEffect(() => { openWindow(SHOWCASE_WINDOW) }, []) // eslint-disable-line
 
   const contentRefs = useRef({})
   windows.forEach((w) => {
@@ -92,9 +95,24 @@ export function Desktop() {
 
   const handleOpen = useCallback((icon) => { openWindow(icon.window) }, [openWindow])
 
-  return (
-    <div className="win95-desktop" onClick={() => setSelected(null)}>
+  const handleContextMenu = useCallback((e) => {
+    e.preventDefault()
+    if (e.target.closest('.win95-window')) return
+    const rect = desktopRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 }
+    setContextMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+  }, [])
 
+  const openProperties = useCallback(() => {
+    openWindow(PROPERTIES_WINDOW)
+  }, [openWindow])
+
+  return (
+    <div
+      ref={desktopRef}
+      className="win95-desktop"
+      onClick={() => setSelected(null)}
+      onContextMenu={handleContextMenu}
+    >
       {ICONS.map((icon) => (
         <DesktopShortcut
           key={icon.id}
@@ -112,6 +130,16 @@ export function Desktop() {
           </Window>
         ))}
       </AnimatePresence>
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          containerRef={desktopRef}
+          onClose={() => setContextMenu(null)}
+          onOpenProperties={openProperties}
+        />
+      )}
 
       <Taskbar />
     </div>

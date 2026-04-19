@@ -8,8 +8,15 @@ export const useOSStore = create((set, get) => {
   return {
   windows: [],
 
+  screenWidth:  640,
+  screenHeight: 480,
+  setScreenSize: (w, h) => set({ screenWidth: w, screenHeight: h }),
+
   isShutdown: false,
   numShutdowns: 0,
+  isBSOD: false,
+  triggerBSOD: () => set({ isBSOD: true }),
+  clearBSOD:   () => set({ isBSOD: false }),
 
   triggerShutdown: () =>
     set((s) => ({ isShutdown: true, numShutdowns: s.numShutdowns + 1 })),
@@ -38,6 +45,10 @@ export const useOSStore = create((set, get) => {
     const id     = _idCounter++
     const count  = windows.length
     const zIndex = ++_zCounter
+    const { screenWidth, screenHeight } = get()
+    const TASKBAR_H = 28
+    const desktopW  = screenWidth
+    const desktopH  = screenHeight - TASKBAR_H
 
     set((s) => ({
       windows: [
@@ -47,9 +58,10 @@ export const useOSStore = create((set, get) => {
           appId:       config.appId ?? null,
           title:       config.title ?? 'Sans titre',
           icon:        config.icon  ?? null,
+          rainbow:     config.rainbow ?? false,
           content:     config.content,
-          position:    { x: 40 + (count % 6) * 24, y: 30 + (count % 6) * 24 },
-          size:        { width: config.width ?? 440, height: config.height ?? 320 },
+          position:    { x: Math.round((desktopW - (config.width ?? 580)) / 2) + (count % 4) * 16, y: Math.round((desktopH - (config.height ?? 400)) / 2) + (count % 4) * 16 },
+          size:        { width: config.width ?? 580, height: config.height ?? 400 },
           isMinimized: false,
           isMaximized: false,
           zIndex,
@@ -88,11 +100,6 @@ export const useOSStore = create((set, get) => {
   updatePosition: (id, pos) =>
     set((s) => ({
       windows: s.windows.map((w) => (w.id === id ? { ...w, position: pos } : w)),
-    })),
-
-  updateSize: (id, size) =>
-    set((s) => ({
-      windows: s.windows.map((w) => (w.id === id ? { ...w, size } : w)),
     })),
   }
 })

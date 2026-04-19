@@ -38,10 +38,49 @@
    ────────────────────────────────────────────────────────────── */
 
 .win95-crt-root {
-  -webkit-font-smoothing:  none;         /* Chrome/Safari : désactive subpixel AA */
-  -moz-osx-font-smoothing: unset;        /* Firefox macOS */
-  font-smooth:             never;        /* standard (peu supporté, utile quand même) */
-  text-rendering:          geometricPrecision; /* précision géométrique > hints lisibilité */
+  -webkit-font-smoothing:  none;
+  -moz-osx-font-smoothing: unset;
+  font-smooth:             never;
+  text-rendering:          geometricPrecision;
+  animation: crt-flicker 12s step-end infinite;
+}
+
+/* Flicker irrégulier : stable la plupart du temps, 2-3 dips rapides par cycle */
+@keyframes crt-flicker {
+  0%,  17%,  19%,  21%,  100% { opacity: 1;    }
+  18%                         { opacity: 0.94; }
+  20%                         { opacity: 0.97; }
+  60%,  62%                   { opacity: 0.96; }
+  61%                         { opacity: 1;    }
+}
+
+/* Vignettage CRT sur toute la surface de l'écran (tube cathodique) */
+.win95-crt-root::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100000;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(0, 0, 0, 0.12) 85%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+}
+
+/* Micro-jitter CRT (< 0.25px, Henry exact) */
+.jitter {
+  animation: jittery 0.3s ease-in-out infinite;
+}
+
+@keyframes jittery {
+  5%  { transform: translate(-0.08px, -0.12px) scale(1); }
+  10% { transform: translate( 0.00px,  0.00px) scale(1); }
+  30% { transform: translate(-0.15px, -0.20px) scale(1); }
+  50% { transform: translate( 0.00px,  0.00px) scale(1); }
+  70% { transform: translate(-0.10px,  0.08px) scale(1); }
+  90% { transform: translate( 0.00px,  0.00px) scale(1); }
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -293,8 +332,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 3px 2px 4px;
-  height: 18px;
+  padding: 3px 4px 3px 6px;
+  height: 30px;
   /* Active par défaut : gradient bleu Heffernan exact */
   background: linear-gradient(
     to right,
@@ -305,7 +344,7 @@
   cursor: move;
   flex-shrink: 0;
   font-weight: bold;
-  font-size: 11px;
+  font-size: 13px;
   /* Transition douce active ↔ inactive */
   transition: background 0.1s ease, color 0.1s ease;
 }
@@ -315,6 +354,29 @@
 .win95-window:not([data-active]) .win95-titlebar {
   background: var(--w-title-inactive);
   color: var(--w-title-text-inactive);
+}
+
+/* ── Rainbow titlebar (Henry Heffernan) ─────────────────────────── */
+.win95-titlebar.rainbow {
+  background: linear-gradient(
+    124deg,
+    #ff2400, #e81d1d, #e8b71d, #e3e81d,
+    #1de840, #1ddde8, #2b1de8, #dd00f3, #dd00f3
+  );
+  background-size: 1800% 1800%;
+  animation: win95-rainbow 18s ease infinite;
+}
+/* La fenêtre inactive stoppe l'animation */
+.win95-window[data-active="false"] .win95-titlebar.rainbow,
+.win95-window:not([data-active]) .win95-titlebar.rainbow {
+  animation: none;
+  background: var(--w-title-inactive);
+}
+
+@keyframes win95-rainbow {
+  0%   { background-position: 0%   82%; }
+  50%  { background-position: 100% 19%; }
+  100% { background-position: 0%   82%; }
 }
 
 .win95-title-left {
@@ -341,18 +403,18 @@
 /* ── Boutons titlebar ── */
 .win95-controls {
   display: flex;
-  gap: 1px;
+  gap: 2px;
   flex-shrink: 0;
 }
 .win95-ctrl-btn {
-  width: 16px; height: 14px;
+  width: 24px; height: 22px;
   background: var(--w-gray);
   border: 1px solid;
   border-color: var(--w-white) var(--w-darker) var(--w-darker) var(--w-white);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: bold;
   cursor: pointer;
   padding: 0;
@@ -388,29 +450,14 @@
   font-size: 11px;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 [data-theme="retro-dark"] .win95-body {
   background: #111;
   color: #cccccc;
 }
 
-/* ── Poignée de redimensionnement ── */
-.win95-resize-handle {
-  position: absolute;
-  bottom: 0; right: 0;
-  width: 14px; height: 14px;
-  cursor: se-resize;
-  background-image:
-    radial-gradient(circle, var(--w-dark)  1px, transparent 1px),
-    radial-gradient(circle, var(--w-white) 1px, transparent 1px);
-  background-size: 4px 4px;
-  background-position: 0 0, 2px 2px;
-  opacity: 0.75;
-  /* Capteur agrandie pour meilleure UX (visuellement = 14px, hit = 20px) */
-  padding: 6px;
-  margin: -6px;
-  z-index: 1;
-}
+/* Resize désactivé (taille fixe à l'ouverture) */
 
 /* ═══════════════════════════════════════════════════════════════
    BARRE DES TÂCHES
@@ -495,7 +542,7 @@
 .win95-desktop {
   position: relative;
   width: 100%;
-  height: calc(100% - 28px);
+  height: 100%;
   background: var(--w-teal);
   overflow: hidden;
 }
@@ -747,8 +794,8 @@
 .win95-ctrl-btn img {
   display: block;
   flex-shrink: 0;
-  width: 10px;
-  height: 10px;
+  width: 16px;
+  height: 16px;
   image-rendering: pixelated;
   filter: contrast(1.1) brightness(0.9);
 }
@@ -1438,4 +1485,314 @@
   padding-bottom: 8px;
   border-bottom:  1px solid #d0d0d0;
   margin-bottom:  12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HENRY-STYLE SHOWCASE — Layout, Typography, Components
+   ═══════════════════════════════════════════════════════════════ */
+
+
+/* Root layout — fills the OS window content area */
+.site-page {
+  display:    flex;
+  position:   absolute;
+  inset:      0;
+  overflow:   hidden;
+  background: #ffffff;
+}
+
+/* Scoped typography — does NOT affect OS chrome outside .site-page */
+.site-page h1 {
+  font-family: 'Times New Roman', serif;
+  font-size:   36px;
+  margin:      0;
+  line-height: 1;
+}
+
+.site-page h2 {
+  font-family: 'Times New Roman', serif;
+  font-size:   22px;
+  margin:      0;
+}
+
+.site-page h3 {
+  font-family: 'Times New Roman', serif;
+  font-size:   17px;
+  margin:      0;
+}
+
+.site-page h4 {
+  font-family: 'Times New Roman', serif;
+  font-size:   14px;
+  margin:      0;
+}
+
+.site-page p {
+  font-family: 'Times New Roman', serif;
+  font-size:   13px;
+  margin:      0;
+}
+
+.site-page li {
+  font-family:   'Times New Roman', serif;
+  font-size:     13px;
+  margin-bottom: 10px;
+}
+
+.site-page b,
+.site-page strong {
+  font-family: 'Times New Roman', serif;
+}
+
+/* Scrollable content panel (right of sidebar) */
+.site-page-content {
+  display:        flex;
+  flex-direction: column;
+  padding:        20px 24px 40px 20px;
+  overflow-y:     scroll;
+  flex:           1;
+}
+
+/* Text block — paragraph grouping */
+.text-block {
+  margin-top:     16px;
+  margin-bottom:  24px;
+  display:        flex;
+  flex-direction: column;
+}
+
+/* Big clickable button — Win95 raised border */
+.big-button-container {
+  display:       flex;
+  align-items:   center;
+  gap:           16px;
+  box-shadow:    var(--border-raised-outer), var(--border-raised-inner);
+  padding:       20px 24px;
+  cursor:        pointer;
+  margin-bottom: 16px;
+  background:    var(--w-surface-h, #e9e9e9);
+}
+
+.big-button-container:hover  { background-color: #d4d4d4; }
+.big-button-container:active { background-color: var(--w-surface, #c0c0c0); }
+
+/* Win95-style form submit button */
+.site-button {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  background:      var(--w-surface-h, #e9e9e9);
+  box-shadow:      var(--border-raised-outer), var(--border-raised-inner);
+  border:          none;
+  padding:         4px 16px;
+  font-family:     'Times New Roman', serif;
+  font-size:       15px;
+  cursor:          pointer;
+  min-width:       160px;
+  height:          28px;
+}
+
+.site-button:hover    { background-color: #d4d4d4; }
+
+.site-button:disabled {
+  cursor:     not-allowed;
+  background: var(--w-surface, #c0c0c0);
+  color:      #777;
+}
+
+/* ── Sidebar Navbar ───────────────────────────────────────────── */
+
+.showcase-navbar {
+  width:          140px;
+  flex-shrink:    0;
+  padding:        32px 24px;
+  display:        flex;
+  flex-direction: column;
+  overflow:       hidden;
+  box-sizing:     border-box;
+  border-right:   1px solid #d0d0d0;
+}
+
+.showcase-navbar-header {
+  display:        flex;
+  flex-direction: column;
+  margin-bottom:  48px;
+}
+
+.showcase-navbar-name {
+  font-family: 'Times New Roman', serif;
+  font-size:   28px;
+  line-height: 1.1;
+  margin:      0;
+}
+
+.showcase-navbar-sub {
+  font-family: 'Times New Roman', serif;
+  font-size:   13px;
+  margin:      8px 0 0 0;
+  color:       #555;
+}
+
+.showcase-navbar-links {
+  display:        flex;
+  flex-direction: column;
+}
+
+.showcase-nav-link {
+  font-family:    'Times New Roman', serif;
+  font-size:      13px;
+  letter-spacing: 1px;
+  margin-bottom:  24px;
+  background:     none;
+  border:         none;
+  cursor:         pointer;
+  text-align:     left;
+  padding:        0;
+  color:          #000;
+  text-decoration: none;
+}
+
+.showcase-nav-link:hover  { text-decoration: underline; }
+.showcase-nav-link.active { text-decoration: underline; }
+
+/* ── Home page ────────────────────────────────────────────────── */
+
+.site-page-home {
+  display:         flex;
+  flex:            1;
+  align-items:     center;
+  justify-content: center;
+}
+
+.site-page-home-content {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  text-align:     center;
+  gap:            12px;
+}
+
+.site-page-home-title {
+  font-family: 'Times New Roman', serif !important;
+  font-size:   42px !important;
+  line-height: 1 !important;
+  margin:      0 0 8px 0 !important;
+}
+
+.site-page-home-role {
+  font-family: 'Times New Roman', serif !important;
+  font-size:   20px !important;
+  margin:      0 !important;
+}
+
+.site-page-home-sub {
+  font-family: 'Times New Roman', serif !important;
+  font-size:   13px !important;
+  color:       #555 !important;
+  margin:      0 0 16px 0 !important;
+}
+
+.site-page-home-nav {
+  display: flex;
+  gap:     32px;
+}
+
+/* ── Experience header rows ────────────────────────────────────── */
+
+.experience-header {
+  display:        flex;
+  flex-direction: column;
+  width:          100%;
+  margin-top:     16px;
+  margin-bottom:  4px;
+}
+
+.experience-header-row {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     flex-end;
+  width:           100%;
+  margin-bottom:   4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WIN95 CURSORS — SVG data URIs, pixel-art style
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Arrow (default) — hot spot 0 0 */
+.win95-crt-root,
+.win95-desktop,
+.win95-window,
+.win95-body {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='20'%3E%3Cpath fill='white' d='M0 0L0 14L3 11L6 17L8 16L5 10L9 10Z'/%3E%3Cpath fill='black' d='M0 0L0 13L3 10L6 16L7 15L4 9L8 9Z'/%3E%3C/svg%3E") 0 0, default;
+}
+
+/* Pointer (hand) — cliquables — hot spot 5 0 */
+.win95-ctrl-btn,
+.win95-tab-outer,
+.win95-startmenu-item:not(.disabled),
+.win95-contextmenu-item:not(.disabled),
+.win95-shortcut,
+button {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='20'%3E%3Cpath fill='white' stroke='white' stroke-width='1' d='M5 0L5 9L4 9L4 10L3 10L3 11L2 11L2 16L3 17L9 17L11 15L11 9L10 9L10 8L9 8L9 6L8 6L8 0Z'/%3E%3Cpath fill='black' d='M6 0L6 8L7 8L7 9L8 9L8 10L9 10L9 14L8 16L4 16L3 15L3 12L4 12L4 11L5 11L5 10L6 10L6 9Z'/%3E%3C/svg%3E") 5 0, pointer;
+}
+
+/* Wait (hourglass) — boot + BSOD recovery */
+.win95-boot,
+.blinking-cursor {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='19'%3E%3Crect x='2' y='1' width='9' height='2' fill='black'/%3E%3Crect x='2' y='16' width='9' height='2' fill='black'/%3E%3Crect x='2' y='1' width='1' height='17' fill='black'/%3E%3Crect x='10' y='1' width='1' height='17' fill='black'/%3E%3Cpolygon points='3,3 10,3 6.5,9' fill='black'/%3E%3Cpolygon points='3,16 10,16 6.5,10' fill='black'/%3E%3C/svg%3E") 6 9, wait;
+}
+
+/* Move cursor on titlebar is handled inline in Window.jsx (cursor: move) */
+
+/* ═══════════════════════════════════════════════════════════════
+   CONTEXT MENU WIN95
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-contextmenu {
+  position: absolute;
+  background: var(--w-surface);
+  box-shadow: var(--border-raised);
+  font-family: var(--w-font);
+  font-size: 11px;
+  min-width: 150px;
+  z-index: 99998;
+  padding: 2px;
+  user-select: none;
+}
+
+.win95-contextmenu-sub {
+  position: absolute;
+  left: 100%;
+  top: -2px;
+}
+
+.win95-contextmenu-item {
+  padding: 3px 24px 3px 8px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='20'%3E%3Cpath fill='white' stroke='white' stroke-width='1' d='M5 0L5 9L4 9L4 10L3 10L3 11L2 11L2 16L3 17L9 17L11 15L11 9L10 9L10 8L9 8L9 6L8 6L8 0Z'/%3E%3Cpath fill='black' d='M6 0L6 8L7 8L7 9L8 9L8 10L9 10L9 14L8 16L4 16L3 15L3 12L4 12L4 11L5 11L5 10L6 10L6 9Z'/%3E%3C/svg%3E") 5 0, pointer;
+}
+
+.win95-contextmenu-item:not(.disabled):hover {
+  background: var(--w-blue);
+  color: #ffffff;
+}
+
+.win95-contextmenu-item.disabled {
+  color: var(--w-shadow);
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='20'%3E%3Cpath fill='white' d='M0 0L0 14L3 11L6 17L8 16L5 10L9 10Z'/%3E%3Cpath fill='black' d='M0 0L0 13L3 10L6 16L7 15L4 9L8 9Z'/%3E%3C/svg%3E") 0 0, default;
+}
+
+.win95-contextmenu-item.has-submenu {
+  position: relative;
+}
+
+.win95-contextmenu-divider {
+  height: 1px;
+  background: var(--w-shadow);
+  margin: 2px 4px;
+  box-shadow: 0 1px 0 var(--w-highlight);
 }

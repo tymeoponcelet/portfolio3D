@@ -49,12 +49,14 @@ export function FileExplorer({ folderId, folderName }) {
   return (
     <div
       className="win95-fileexplorer"
-      onClick={(e) => { e.stopPropagation(); setSelectedId(null); setRenamingId(null) }}
     >
       <div className="win95-fileexplorer-addressbar">
         📁 C:\Bureau\{folderName}
       </div>
-      <div className="win95-fileexplorer-body">
+      <div
+        className="win95-fileexplorer-body"
+        onClick={(e) => { e.stopPropagation(); setSelectedId(null); setRenamingId(null) }}
+      >
         {items.length === 0 ? (
           <p style={{ color: '#808080', fontSize: 11, padding: 16, fontFamily: 'var(--w-font)' }}>
             Ce dossier est vide.

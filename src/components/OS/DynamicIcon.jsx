@@ -14,6 +14,7 @@ export function DynamicIcon({
 }) {
   const inputRef      = useRef(null)
   const clickTimerRef = useRef(null)
+  const committedRef  = useRef(false)
 
   useEffect(() => {
     if (isRenaming && inputRef.current) {
@@ -50,15 +51,19 @@ export function DynamicIcon({
     if (!isRenaming) return
     if (e.key === 'Enter') {
       e.preventDefault()
-      onRenameConfirm(item.id, inputRef.current.value)
+      committedRef.current = true
+      onRenameConfirm(item.id, inputRef.current?.value ?? item.name)
     }
     if (e.key === 'Escape') {
+      committedRef.current = true
       onRenameCancel(item.id)
     }
-  }, [isRenaming, item.id, onRenameConfirm, onRenameCancel])
+  }, [isRenaming, item.id, item.name, onRenameConfirm, onRenameCancel])
 
   const handleBlur = useCallback(() => {
-    if (isRenaming) onRenameConfirm(item.id, inputRef.current?.value ?? item.name)
+    if (!isRenaming) return
+    if (committedRef.current) { committedRef.current = false; return }
+    onRenameConfirm(item.id, inputRef.current?.value ?? item.name)
   }, [isRenaming, item.id, item.name, onRenameConfirm])
 
   return (

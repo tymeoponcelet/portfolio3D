@@ -2,7 +2,11 @@
 let _ctx = null
 
 function ctx() {
-  if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)()
+  if (!_ctx) {
+    const Ctor = window.AudioContext ?? window.webkitAudioContext
+    if (!Ctor) return null
+    _ctx = new Ctor()
+  }
   if (_ctx.state === 'suspended') _ctx.resume()
   return _ctx
 }
@@ -10,6 +14,7 @@ function ctx() {
 function tone(freq, dur, type = 'square', vol = 0.25) {
   try {
     const c = ctx()
+    if (!c) return
     const osc = c.createOscillator()
     const gain = c.createGain()
     osc.connect(gain)
@@ -31,6 +36,7 @@ export const win95sounds = {
   error:    () => { tone(300, 0.15, 'square', 0.3); setTimeout(() => tone(250, 0.2, 'square', 0.25), 170) },
   bsod:     () => tone(180, 1.0, 'square', 0.35),
   startup:  () => {
+    // Uses Audio element (not Web Audio API) — startup.mp3 is a recorded chime, not synthesised.
     try {
       const a = new Audio('/sounds/startup.mp3')
       a.volume = 0.6

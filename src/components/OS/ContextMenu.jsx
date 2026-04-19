@@ -25,7 +25,7 @@ export function SystemProperties() {
   )
 }
 
-export function ContextMenu({ x, y, containerRef, onClose, onOpenProperties }) {
+export function ContextMenu({ x, y, containerRef, onClose, onOpenProperties, onCreateFolder, onCreateFile }) {
   const menuRef        = useRef(null)
   const subTriggerRef  = useRef(null)
   const [subOpen, setSubOpen] = useState(false)
@@ -81,8 +81,18 @@ export function ContextMenu({ x, y, containerRef, onClose, onOpenProperties }) {
             className="win95-contextmenu win95-contextmenu-sub"
             style={subLeft ? { left: 'auto', right: '100%' } : undefined}
           >
-            <div className="win95-contextmenu-item disabled">Dossier</div>
-            <div className="win95-contextmenu-item disabled">Raccourci</div>
+            <div
+              className="win95-contextmenu-item"
+              onMouseDown={() => { win95sounds.click(); onCreateFolder(); onClose() }}
+            >
+              Dossier
+            </div>
+            <div
+              className="win95-contextmenu-item"
+              onMouseDown={() => { win95sounds.click(); onCreateFile(); onClose() }}
+            >
+              Fichier texte
+            </div>
           </div>
         )}
       </div>

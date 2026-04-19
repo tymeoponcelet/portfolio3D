@@ -26,16 +26,23 @@ export function SystemProperties() {
 }
 
 export function ContextMenu({ x, y, containerRef, onClose, onOpenProperties }) {
-  const menuRef   = useRef(null)
+  const menuRef        = useRef(null)
+  const subTriggerRef  = useRef(null)
   const [subOpen, setSubOpen] = useState(false)
+  const [subLeft, setSubLeft] = useState(false)
 
-  /* Fermeture au clic extérieur */
+  /* Fermeture au clic extérieur ou touche Échap */
   useEffect(() => {
     const handler = (e) => {
+      if (e.type === 'keydown' && e.key === 'Escape') { onClose(); return }
       if (menuRef.current && !menuRef.current.contains(e.target)) onClose()
     }
     document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('keydown',   handler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('keydown',   handler)
+    }
   }, [onClose])
 
   /* Ajuster la position pour rester dans le bureau */
@@ -55,14 +62,25 @@ export function ContextMenu({ x, y, containerRef, onClose, onOpenProperties }) {
       <div className="win95-contextmenu-item disabled">Actualiser</div>
       <div className="win95-contextmenu-divider" />
       <div
+        ref={subTriggerRef}
         className="win95-contextmenu-item has-submenu"
-        onMouseEnter={() => setSubOpen(true)}
+        onMouseEnter={() => {
+          setSubOpen(true)
+          if (subTriggerRef.current && containerRef?.current) {
+            const triggerRect   = subTriggerRef.current.getBoundingClientRect()
+            const containerRect = containerRef.current.getBoundingClientRect()
+            setSubLeft(triggerRect.right + 150 > containerRect.right)
+          }
+        }}
         onMouseLeave={() => setSubOpen(false)}
       >
         <span>Nouveau</span>
         <span style={{ marginLeft: 'auto', fontSize: 9 }}>▶</span>
         {subOpen && (
-          <div className="win95-contextmenu win95-contextmenu-sub">
+          <div
+            className="win95-contextmenu win95-contextmenu-sub"
+            style={subLeft ? { left: 'auto', right: '100%' } : undefined}
+          >
             <div className="win95-contextmenu-item disabled">Dossier</div>
             <div className="win95-contextmenu-item disabled">Raccourci</div>
           </div>

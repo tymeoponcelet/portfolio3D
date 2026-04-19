@@ -74,8 +74,9 @@ export function OS() {
   /* ── BSOD recovery: clear flag + re-boot ────────────────────── */
   const handleBSODRecover = useCallback(() => {
     clearBSOD()
+    completeShutdown()
     setBooted(false)
-  }, [clearBSOD])
+  }, [clearBSOD, completeShutdown])
 
   /* ── Shutdown → SafeToTurnOff → completeShutdown ───────────── */
   const handleShutdownComplete = useCallback(() => setShowSafe(true), [])

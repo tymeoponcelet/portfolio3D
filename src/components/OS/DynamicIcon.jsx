@@ -1,16 +1,18 @@
 import { useRef, useEffect, useCallback } from 'react'
-import { icons } from '../../assets/icons/index.js'
 
 export function DynamicIcon({
   item,
   style,
   isSelected,
   isRenaming,
+  isDropTarget,
   onSelect,
   onOpen,
   onRenameStart,
   onRenameConfirm,
   onRenameCancel,
+  onDragStart,
+  onContextMenu,
 }) {
   const inputRef      = useRef(null)
   const clickTimerRef = useRef(null)
@@ -29,23 +31,48 @@ export function DynamicIcon({
     e.stopPropagation()
     if (isRenaming) return
 
-    if (clickTimerRef.current) {
-      clearTimeout(clickTimerRef.current)
-      clickTimerRef.current = null
-      onOpen(item)
-      return
+    const startX  = e.clientX
+    const startY  = e.clientY
+    const rect    = e.currentTarget.getBoundingClientRect()
+    const offX    = e.clientX - rect.left
+    const offY    = e.clientY - rect.top
+    let   dragged = false
+
+    const cleanup = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup',   onUp)
     }
 
-    if (isSelected) {
-      clickTimerRef.current = setTimeout(() => {
-        clickTimerRef.current = null
-        onRenameStart(item.id)
-      }, 300)
-    } else {
-      onSelect(item.id)
-      clickTimerRef.current = setTimeout(() => { clickTimerRef.current = null }, 300)
+    const onMove = (me) => {
+      if (Math.abs(me.clientX - startX) > 5 || Math.abs(me.clientY - startY) > 5) {
+        dragged = true
+        cleanup()
+        if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null }
+        onDragStart?.(item, offX, offY, me.clientX, me.clientY)
+      }
     }
-  }, [isRenaming, isSelected, item, onSelect, onOpen, onRenameStart])
+
+    const onUp = () => {
+      cleanup()
+      if (dragged) return
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current)
+        clickTimerRef.current = null
+        onOpen(item)
+      } else if (isSelected) {
+        clickTimerRef.current = setTimeout(() => {
+          clickTimerRef.current = null
+          onRenameStart(item.id)
+        }, 300)
+      } else {
+        onSelect(item.id)
+        clickTimerRef.current = setTimeout(() => { clickTimerRef.current = null }, 300)
+      }
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup',   onUp)
+  }, [isRenaming, isSelected, item, onSelect, onOpen, onRenameStart, onDragStart])
 
   const handleKeyDown = useCallback((e) => {
     if (!isRenaming) return
@@ -66,24 +93,31 @@ export function DynamicIcon({
     onRenameConfirm(item.id, inputRef.current?.value ?? item.name)
   }, [isRenaming, item.id, item.name, onRenameConfirm])
 
+  const handleContextMenu = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onContextMenu?.(item, e.clientX, e.clientY)
+  }, [item, onContextMenu])
+
+  const iconSrc = item.type === 'folder' ? '/png/folder.png' : '/png/txtfile.png'
+
   return (
     <button
-      className={`win95-shortcut${isSelected ? ' selected' : ''}`}
+      className={`win95-shortcut${isSelected ? ' selected' : ''}${isDropTarget ? ' drop-target' : ''}`}
       style={style}
       onMouseDown={handleMouseDown}
+      onContextMenu={handleContextMenu}
+      data-itemid={item.id}
       aria-label={item.name}
     >
       <div className="win95-shortcut-icon-wrap">
-        {isSelected && item.type === 'folder' && (
+        {isSelected && (
           <div
             className="win95-shortcut-overlay"
-            style={{ WebkitMaskImage: `url(${icons.windowExplorerIcon})` }}
+            style={{ WebkitMaskImage: `url(${iconSrc})` }}
           />
         )}
-        {item.type === 'folder'
-          ? <img src={icons.windowExplorerIcon} alt="dossier" className="win95-shortcut-img" />
-          : <span style={{ fontSize: 28, lineHeight: '32px', display: 'block', textAlign: 'center' }}>📄</span>
-        }
+        <img src={iconSrc} alt="" className="win95-shortcut-img" />
       </div>
       {isRenaming ? (
         <input

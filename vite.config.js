@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  base: '/portfolio3d/',
+  base: '/portfolio3D/',
   plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {

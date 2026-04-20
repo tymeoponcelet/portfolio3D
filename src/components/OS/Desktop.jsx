@@ -125,7 +125,16 @@ export function Desktop() {
       const tid   = btn?.dataset.itemid
       const tItem = tid ? useFsStore.getState().items.find((i) => i.id === tid) : null
 
-      if (tItem?.type === 'folder' && tid !== id) {
+      const items = useFsStore.getState().items
+      const isDescendant = (ancestorId, targetId) => {
+        let cur = items.find((i) => i.id === targetId)
+        while (cur) {
+          if (cur.parentId === ancestorId) return true
+          cur = items.find((i) => i.id === cur.parentId)
+        }
+        return false
+      }
+      if (tItem?.type === 'folder' && tid !== id && !isDescendant(id, tid)) {
         useFsStore.getState().setParent(id, tid)
       } else {
         const rect = desktopRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 }

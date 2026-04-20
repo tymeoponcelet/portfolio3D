@@ -20,6 +20,7 @@ export function DynamicIcon({
 
   useEffect(() => {
     if (isRenaming && inputRef.current) {
+      committedRef.current = false
       inputRef.current.focus()
       inputRef.current.select()
     }
@@ -29,7 +30,7 @@ export function DynamicIcon({
 
   const handleMouseDown = useCallback((e) => {
     e.stopPropagation()
-    if (isRenaming) return
+    if (isRenaming || e.button !== 0) return
 
     const startX  = e.clientX
     const startY  = e.clientY
@@ -59,14 +60,9 @@ export function DynamicIcon({
         clearTimeout(clickTimerRef.current)
         clickTimerRef.current = null
         onOpen(item)
-      } else if (isSelected) {
-        clickTimerRef.current = setTimeout(() => {
-          clickTimerRef.current = null
-          onRenameStart(item.id)
-        }, 300)
       } else {
         onSelect(item.id)
-        clickTimerRef.current = setTimeout(() => { clickTimerRef.current = null }, 300)
+        clickTimerRef.current = setTimeout(() => { clickTimerRef.current = null }, 200)
       }
     }
 
@@ -106,6 +102,7 @@ export function DynamicIcon({
       className={`win95-shortcut${isSelected ? ' selected' : ''}${isDropTarget ? ' drop-target' : ''}`}
       style={style}
       onMouseDown={handleMouseDown}
+      onClick={(e) => e.stopPropagation()}
       onContextMenu={handleContextMenu}
       data-itemid={item.id}
       aria-label={item.name}

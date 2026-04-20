@@ -27,7 +27,7 @@ export function IconContextMenu({ clientX, clientY, item, onRename, onClose }) {
     >
       <div
         className="win95-contextmenu-item"
-        onMouseDown={() => { win95sounds.click(); onRename(item.id); onClose() }}
+        onClick={(e) => { e.stopPropagation(); win95sounds.click(); onRename(item.id); onClose() }}
       >
         Renommer
       </div>

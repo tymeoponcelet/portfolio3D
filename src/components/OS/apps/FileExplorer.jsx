@@ -36,7 +36,16 @@ export function FileExplorer({ folderId, folderName }) {
       const tid   = btn?.dataset.itemid
       const tItem = tid ? useFsStore.getState().items.find((i) => i.id === tid) : null
 
-      if (tItem?.type === 'folder' && tid !== id) {
+      const items = useFsStore.getState().items
+      const isDescendant = (ancestorId, targetId) => {
+        let cur = items.find((i) => i.id === targetId)
+        while (cur) {
+          if (cur.parentId === ancestorId) return true
+          cur = items.find((i) => i.id === cur.parentId)
+        }
+        return false
+      }
+      if (tItem?.type === 'folder' && tid !== id && !isDescendant(id, tid)) {
         useFsStore.getState().setParent(id, tid)
       }
       setDrag(null)
@@ -138,19 +147,20 @@ export function FileExplorer({ folderId, folderName }) {
           ))
         )}
 
-        {drag && draggedItem && (
-          <div
-            className="win95-drag-ghost"
-            style={{ left: drag.clientX - drag.offsetX, top: drag.clientY - drag.offsetY }}
-          >
-            <img
-              src={draggedItem.type === 'folder' ? '/png/folder.png' : '/png/txtfile.png'}
-              alt=""
-            />
-            <span>{draggedItem.name}</span>
-          </div>
-        )}
       </div>
+
+      {drag && draggedItem && (
+        <div
+          className="win95-drag-ghost"
+          style={{ left: drag.clientX - drag.offsetX, top: drag.clientY - drag.offsetY }}
+        >
+          <img
+            src={draggedItem.type === 'folder' ? '/png/folder.png' : '/png/txtfile.png'}
+            alt=""
+          />
+          <span>{draggedItem.name}</span>
+        </div>
+      )}
 
       {iconContextMenu && (
         <IconContextMenu

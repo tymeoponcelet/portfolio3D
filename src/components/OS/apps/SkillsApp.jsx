@@ -1,104 +1,44 @@
-// src/components/OS/apps/SkillsApp.jsx
-import { useState } from 'react'
-
-const CATEGORIES = [
-  {
-    id:    'infra',
-    icon:  '🖧',
-    label: 'Infrastructure',
-    path:  'C:\\Panneau de configuration\\Infrastructure',
-    items: [
-      { name: 'Windows Server / AD',   level: 4, max: 5 },
-      { name: 'Cisco / Packet Tracer', level: 3, max: 5 },
-      { name: 'pfSense / VyOS',        level: 3, max: 5 },
-      { name: 'Adressage IP / VLSM',   level: 4, max: 5 },
-      { name: 'VirtualBox',            level: 4, max: 5 },
-    ],
-  },
-  {
-    id:    'secu',
-    icon:  '🔐',
-    label: 'Cybersécurité',
-    path:  'C:\\Panneau de configuration\\Cybersécurité',
-    items: [
-      { name: 'Kali Linux',        level: 3, max: 5 },
-      { name: 'Wireshark',         level: 3, max: 5 },
-      { name: 'Hashcat / Hydra',   level: 2, max: 5 },
-      { name: 'Chiffrement',       level: 3, max: 5 },
-    ],
-  },
-  {
-    id:    'linux',
-    icon:  '🐧',
-    label: 'Systèmes Linux',
-    path:  'C:\\Panneau de configuration\\Linux',
-    items: [
-      { name: 'Debian / Ubuntu',   level: 4, max: 5 },
-      { name: 'GLPI',              level: 3, max: 5 },
-      { name: 'Zabbix + Grafana',  level: 3, max: 5 },
-      { name: 'Bash / Scripts',    level: 3, max: 5 },
-    ],
-  },
-]
-
-function ProgressBar({ level, max }) {
-  return (
-    <div className="win95-progress-track">
-      <div
-        className="win95-progress-fill"
-        style={{ width: `${(level / max) * 100}%` }}
-      />
-    </div>
-  )
-}
-
 export function SkillsApp() {
-  const [active, setActive] = useState(CATEGORIES[0])
-
   return (
-    <div className="win95-explorer">
+    <div className="site-page-content">
 
-      {/* Barre d'adresse */}
-      <div className="win95-explorer-addr">
-        <span>Adresse :</span>
-        <div className="win95-explorer-addr-field">{active.path}</div>
-      </div>
-
-      {/* Corps */}
-      <div className="win95-explorer-body">
-
-        {/* Sidebar */}
-        <div className="win95-explorer-sidebar">
-          {CATEGORIES.map((cat) => (
-            <div
-              key={cat.id}
-              className={`win95-explorer-sidebar-item${active.id === cat.id ? ' active' : ''}`}
-              onClick={() => setActive(cat)}
-            >
-              <span style={{ fontSize: 13 }}>{cat.icon}</span>
-              <span>{cat.label}</span>
-            </div>
-          ))}
+      <div className="experience-header">
+        <div className="experience-header-row">
+          <h1>McDonald's</h1>
+          <h4>Bain de Bretagne</h4>
         </div>
-
-        {/* Panneau */}
-        <div className="win95-explorer-main">
-          {active.items.map((item) => (
-            <div key={item.name} className="win95-skill-row">
-              <span className="win95-skill-name">{item.name}</span>
-              <ProgressBar level={item.level} max={item.max} />
-              <span style={{ minWidth: 28, textAlign: 'right', color: 'var(--w-darker)' }}>
-                {item.level}/{item.max}
-              </span>
-            </div>
-          ))}
+        <div className="experience-header-row">
+          <h3>Équipier</h3>
+          <b><p>Juil. 2024 – Août 2025</p></b>
         </div>
       </div>
+      <div className="text-block">
+        <p>Travail en équipe dans un environnement cadencé à fort flux.</p>
+        <br />
+        <ul>
+          <li><p>Coordination avec les collègues pour assurer un service efficace</p></li>
+          <li><p>Rigueur et respect des procédures opérationnelles</p></li>
+          <li><p>Application des normes d'hygiène et sécurité alimentaire</p></li>
+        </ul>
+      </div>
 
-      {/* Statusbar */}
-      <div className="win95-statusbar">
-        <span className="win95-statusbar-field">{active.items.length} compétence(s)</span>
-        <span className="win95-statusbar-field">{active.label}</span>
+      <div className="experience-header">
+        <div className="experience-header-row">
+          <h1>Cabinet Kaliame</h1>
+          <h4>Expert-comptable</h4>
+        </div>
+        <div className="experience-header-row">
+          <h3>Stagiaire</h3>
+          <b><p>Février 2023 — 3 jours</p></b>
+        </div>
+      </div>
+      <div className="text-block">
+        <p>Stage d'observation en cabinet d'expertise comptable.</p>
+        <br />
+        <ul>
+          <li><p>Tri, classement et vérification de documents comptables</p></li>
+          <li><p>Organisation et rigueur administrative</p></li>
+        </ul>
       </div>
 
     </div>

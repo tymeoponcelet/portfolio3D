@@ -1,10 +1,11 @@
+import { defineConfig } from 'vite' // <--- CETTE LIGNE EST INDISPENSABLE
 import { resolve } from 'path'
-import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-export default defineConfig({
-  base: '/portfolio3D/',
+export default defineConfig(({ command }) => ({
+  // Ton code ici...
+  base: command === 'serve' ? '/' : '/portfolio3D/',
   plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {
@@ -13,7 +14,6 @@ export default defineConfig({
         os:   resolve(__dirname, 'os.html'),
       },
       output: {
-        // Vite 8 utilise Rolldown : manualChunks doit être une fonction
         manualChunks(id) {
           if (id.includes('three')) return 'three'
           if (id.includes('@react-three')) return 'r3f'
@@ -21,4 +21,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

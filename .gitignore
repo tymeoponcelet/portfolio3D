@@ -22,3 +22,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code internal
+.claude/
+
+# Dev/analysis artifacts
+analysis_report.md
+style-tokens.json
+docs/superpowers/
+scripts/heffernan-analysis/
+scripts/analyze-heffernan*.cjs
+scripts/audit-*.cjs
+scripts/extract-style-tokens.cjs
+
+# Misplaced generated files
+public/models/.claude/
+public/models/Vintage_pc.jsx

@@ -33,30 +33,34 @@ export function DynamicIcon({
     e.stopPropagation()
     if (isRenaming || e.button !== 0) return
 
-    const startX  = e.clientX
-    const startY  = e.clientY
-    const rect    = e.currentTarget.getBoundingClientRect()
-    const offX    = e.clientX - rect.left
-    const offY    = e.clientY - rect.top
-    let   dragged = false
+    const rect = e.currentTarget.getBoundingClientRect()
+    const offX = e.clientX - rect.left
+    const offY = e.clientY - rect.top
+    let dragging  = false
+    let lastX     = e.clientX
+    let lastY     = e.clientY
 
     const cleanup = () => {
+      clearTimeout(holdTimer)
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup',   onUp)
     }
 
+    // Drag démarre après 180ms de maintien — sans bouger
+    const holdTimer = setTimeout(() => {
+      dragging = true
+      if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null }
+      onDragStart?.(item, offX, offY, lastX, lastY)
+    }, 180)
+
     const onMove = (me) => {
-      if (Math.abs(me.clientX - startX) > 5 || Math.abs(me.clientY - startY) > 5) {
-        dragged = true
-        cleanup()
-        if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null }
-        onDragStart?.(item, offX, offY, me.clientX, me.clientY)
-      }
+      lastX = me.clientX
+      lastY = me.clientY
     }
 
     const onUp = () => {
       cleanup()
-      if (dragged) return
+      if (dragging) return   // drop géré par le parent
       if (clickTimerRef.current) {
         clearTimeout(clickTimerRef.current)
         clickTimerRef.current = null
@@ -69,7 +73,7 @@ export function DynamicIcon({
 
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup',   onUp)
-  }, [isRenaming, isSelected, item, onSelect, onOpen, onRenameStart, onDragStart])
+  }, [isRenaming, item, onSelect, onOpen, onDragStart])
 
   const handleKeyDown = useCallback((e) => {
     if (!isRenaming) return

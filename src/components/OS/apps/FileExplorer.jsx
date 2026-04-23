@@ -120,7 +120,7 @@ export function FileExplorer({ folderId }) {
   const parentId      = currentItem?.parentId ?? null
   const canGoUp       = currentFolderId !== null && currentFolderId !== 'trash'
   const addressPath   = buildPath(allItems, currentFolderId)
-  const rawItems      = allItems.filter((i) => i.parentId === currentFolderId)
+  const rawItems      = allItems.filter((i) => i.parentId === currentFolderId && !i.system)
   const displayItems  = sortItems(rawItems, sortKey, sortDir)
   const rootFolders   = allItems.filter((i) => i.type === 'folder' && i.parentId === null)
 

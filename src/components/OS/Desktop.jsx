@@ -97,7 +97,7 @@ export function Desktop() {
   const createItem = useFsStore((s) => s.createItem)
   const renameItem = useFsStore((s) => s.renameItem)
 
-  const desktopFsItems = fsItems.filter((i) => i.parentId === null)
+  const desktopFsItems = fsItems.filter((i) => i.parentId === null && !i.system)
 
   const trashIsEmpty   = useFsStore((s) => !s.items.some((i) => i.parentId === 'trash'))
   const [trashCtxMenu, setTrashCtxMenu] = useState(null)

@@ -101,7 +101,7 @@ export function CSS3DScreen({ screenMesh, isFocused, onScreenLeave }) {
     })
 
     const iframe = document.createElement('iframe')
-    iframe.src                 = '/os.html'
+    iframe.src                 = `${import.meta.env.BASE_URL}os.html`
     iframe.style.width         = '100%'
     iframe.style.height        = '100%'
     iframe.style.border        = 'none'

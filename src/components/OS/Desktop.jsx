@@ -314,7 +314,7 @@ export function Desktop() {
           style={{ left: drag.clientX - drag.offsetX, top: drag.clientY - drag.offsetY }}
         >
           <img
-            src={draggedItem.type === 'folder' ? '/png/folder.png' : '/png/txtfile.png'}
+            src={draggedItem.type === 'folder' ? `${import.meta.env.BASE_URL}png/folder.png` : `${import.meta.env.BASE_URL}png/txtfile.png`}
             alt=""
           />
           <span>{draggedItem.name}</span>

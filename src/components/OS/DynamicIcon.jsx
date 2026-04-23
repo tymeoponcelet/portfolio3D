@@ -95,7 +95,7 @@ export function DynamicIcon({
     onContextMenu?.(item, e.clientX, e.clientY)
   }, [item, onContextMenu])
 
-  const iconSrc = item.type === 'folder' ? '/png/folder.png' : '/png/txtfile.png'
+  const iconSrc = item.type === 'folder' ? `${import.meta.env.BASE_URL}png/folder.png` : `${import.meta.env.BASE_URL}png/txtfile.png`
 
   return (
     <button

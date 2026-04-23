@@ -224,12 +224,13 @@ export function FileExplorer({ folderId }) {
   }, [])
 
   const handleSortClick = useCallback((key) => {
-    setSortKey((prev) => {
-      if (prev === key) { setSortDir((d) => d === 'asc' ? 'desc' : 'asc'); return prev }
+    if (sortKey === key) {
+      setSortDir((d) => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
       setSortDir('asc')
-      return key
-    })
-  }, [])
+    }
+  }, [sortKey])
 
   const draggedItem = drag ? allItems.find((i) => i.id === drag.id) : null
 

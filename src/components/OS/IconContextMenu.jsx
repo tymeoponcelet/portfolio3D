@@ -1,8 +1,18 @@
 import { useEffect, useRef } from 'react'
-import { win95sounds } from '../../utils/win95sounds'
+import { win95sounds }  from '../../utils/win95sounds'
+import { useFsStore }   from '../../stores/fsStore'
 
-export function IconContextMenu({ clientX, clientY, item, onRename, onClose }) {
-  const menuRef = useRef(null)
+export function IconContextMenu({
+  clientX, clientY, item,
+  context = 'normal',
+  onRename,
+  onOpen,
+  onClose,
+}) {
+  const menuRef       = useRef(null)
+  const trashItem     = useFsStore((s) => s.trashItem)
+  const restoreItem   = useFsStore((s) => s.restoreItem)
+  const deleteItem    = useFsStore((s) => s.deleteItem)
 
   useEffect(() => {
     const handler = (e) => {
@@ -21,16 +31,56 @@ export function IconContextMenu({ clientX, clientY, item, onRename, onClose }) {
     <div
       ref={menuRef}
       className="win95-contextmenu"
-      style={{ position: 'fixed', left: clientX, top: clientY }}
+      style={{ position: 'fixed', left: clientX, top: clientY, zIndex: 9999 }}
       onContextMenu={(e) => e.preventDefault()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div
-        className="win95-contextmenu-item"
-        onClick={(e) => { e.stopPropagation(); win95sounds.click(); onRename(item.id); onClose() }}
-      >
-        Renommer
-      </div>
+      {context === 'normal' && (
+        <>
+          <div
+            className="win95-contextmenu-item"
+            onMouseDown={() => { win95sounds.click(); onOpen?.(item); onClose() }}
+          >
+            Ouvrir
+          </div>
+          <div className="win95-contextmenu-divider" />
+          <div
+            className="win95-contextmenu-item"
+            onMouseDown={() => { win95sounds.click(); onRename?.(item.id); onClose() }}
+          >
+            Renommer
+          </div>
+          <div
+            className="win95-contextmenu-item"
+            onMouseDown={() => { win95sounds.click(); trashItem(item.id); onClose() }}
+          >
+            Supprimer
+          </div>
+        </>
+      )}
+      {context === 'trash' && (
+        <>
+          <div
+            className="win95-contextmenu-item"
+            onMouseDown={() => { win95sounds.click(); onOpen?.(item); onClose() }}
+          >
+            Ouvrir
+          </div>
+          <div className="win95-contextmenu-divider" />
+          <div
+            className="win95-contextmenu-item"
+            onMouseDown={() => { win95sounds.click(); restoreItem(item.id); onClose() }}
+          >
+            Restaurer
+          </div>
+          <div
+            className="win95-contextmenu-item"
+            onMouseDown={() => { win95sounds.click(); deleteItem(item.id); onClose() }}
+          >
+            Supprimer définitivement
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -2,6 +2,8 @@
 // Pattern Henry Heffernan — importe les PNG et les exporte par nom.
 import folder             from './folder.png'
 import txtfile            from './txtfile.png'
+import trashEmpty         from './trashEmpty.svg'
+import trashFull          from './trashFull.svg'
 import showcaseIcon       from './showcaseIcon.png'
 import windowExplorerIcon from './windowExplorerIcon.png'
 import computerBig        from './computerBig.png'
@@ -16,6 +18,8 @@ import windowResize       from './windowResize.png'
 export const icons = {
   folder,
   txtfile,
+  trashEmpty,
+  trashFull,
   showcaseIcon,
   windowExplorerIcon,
   computerBig,

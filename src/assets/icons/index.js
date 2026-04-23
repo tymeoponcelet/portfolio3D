@@ -1,5 +1,7 @@
 // src/assets/icons/index.js
 // Pattern Henry Heffernan — importe les PNG et les exporte par nom.
+import folder             from './folder.png'
+import txtfile            from './txtfile.png'
 import showcaseIcon       from './showcaseIcon.png'
 import windowExplorerIcon from './windowExplorerIcon.png'
 import computerBig        from './computerBig.png'
@@ -12,6 +14,8 @@ import close              from './close.png'
 import windowResize       from './windowResize.png'
 
 export const icons = {
+  folder,
+  txtfile,
   showcaseIcon,
   windowExplorerIcon,
   computerBig,

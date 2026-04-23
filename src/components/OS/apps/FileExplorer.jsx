@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { icons }          from '../../../assets/icons'
 import { useFsStore }     from '../../../stores/fsStore'
 import { useOSStore }     from '../../../stores/osStore'
 import { DynamicIcon }    from '../DynamicIcon'
@@ -155,7 +156,7 @@ export function FileExplorer({ folderId, folderName }) {
           style={{ left: drag.clientX - drag.offsetX, top: drag.clientY - drag.offsetY }}
         >
           <img
-            src={draggedItem.type === 'folder' ? `${import.meta.env.BASE_URL}png/folder.png` : `${import.meta.env.BASE_URL}png/txtfile.png`}
+            src={draggedItem.type === 'folder' ? icons.folder : icons.txtfile}
             alt=""
           />
           <span>{draggedItem.name}</span>

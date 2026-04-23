@@ -11,6 +11,7 @@ import { Notepad }                                  from './apps/Notepad'
 import { ContextMenu, SystemProperties }            from './ContextMenu'
 import { DynamicIcon }                              from './DynamicIcon'
 import { IconContextMenu }                          from './IconContextMenu'
+import { TrashContextMenu }                         from './TrashContextMenu'
 
 const SHOWCASE_WINDOW = {
   appId:   'showcase',
@@ -30,6 +31,15 @@ const PROPERTIES_WINDOW = {
   content: <SystemProperties />,
 }
 
+const TRASH_WINDOW = {
+  appId:   'trash-explorer',
+  title:   'Corbeille',
+  icon:    '🗑️',
+  width:   480,
+  height:  340,
+  content: <FileExplorer folderId="trash" folderName="Corbeille" />,
+}
+
 export const ICONS = [
   {
     id:      'showcase',
@@ -40,7 +50,7 @@ export const ICONS = [
   },
 ]
 
-function DesktopShortcut({ entry, isSelected, onSelect, onOpen }) {
+function DesktopShortcut({ entry, isSelected, onSelect, onOpen, onContextMenu }) {
   const { iconSrc, label, pos } = entry
   const timerRef = useRef(null)
 
@@ -61,6 +71,9 @@ function DesktopShortcut({ entry, isSelected, onSelect, onOpen }) {
       style={{ top: pos.top, left: pos.left }}
       onMouseDown={handleClick}
       aria-label={`Ouvrir ${label}`}
+      onContextMenu={onContextMenu
+        ? (e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(e) }
+        : undefined}
     >
       <div className="win95-shortcut-icon-wrap">
         {isSelected && (
@@ -85,6 +98,9 @@ export function Desktop() {
   const renameItem = useFsStore((s) => s.renameItem)
 
   const desktopFsItems = fsItems.filter((i) => i.parentId === null)
+
+  const trashIsEmpty   = useFsStore((s) => !s.items.some((i) => i.parentId === 'trash'))
+  const [trashCtxMenu, setTrashCtxMenu] = useState(null)
 
   const [selected,        setSelected]        = useState(null)
   const [selectedFsId,    setSelectedFsId]    = useState(null)
@@ -256,6 +272,21 @@ export function Desktop() {
         />
       ))}
 
+      <DesktopShortcut
+        key="trash"
+        entry={{
+          id:      'trash',
+          label:   'Corbeille',
+          iconSrc: trashIsEmpty ? icons.trashEmpty : icons.trashFull,
+          pos:     { top: 90, left: 10 },
+          window:  TRASH_WINDOW,
+        }}
+        isSelected={selected === 'trash'}
+        onSelect={() => { setSelected('trash'); setSelectedFsId(null) }}
+        onOpen={() => openWindow(TRASH_WINDOW)}
+        onContextMenu={(e) => setTrashCtxMenu({ clientX: e.clientX, clientY: e.clientY })}
+      />
+
       {desktopFsItems.map((item) => (
         <DynamicIcon
           key={item.id}
@@ -305,6 +336,16 @@ export function Desktop() {
           item={iconContextMenu.item}
           onRename={(id) => { setRenamingId(id); setSelectedFsId(id) }}
           onClose={() => setIconContextMenu(null)}
+        />
+      )}
+
+      {trashCtxMenu && (
+        <TrashContextMenu
+          clientX={trashCtxMenu.clientX}
+          clientY={trashCtxMenu.clientY}
+          isEmpty={trashIsEmpty}
+          onOpen={() => openWindow(TRASH_WINDOW)}
+          onClose={() => setTrashCtxMenu(null)}
         />
       )}
 

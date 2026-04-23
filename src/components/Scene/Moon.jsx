@@ -10,8 +10,8 @@ const WIN_Z  = -1.8
 
 export function Moon() {
   const glowRef     = useRef()
-  const moonGltf    = useGLTF('/models/moon.glb')
-  const fenetreGltf = useGLTF('/models/fenetre.glb')
+  const moonGltf    = useGLTF(`${import.meta.env.BASE_URL}models/moon.glb`)
+  const fenetreGltf = useGLTF(`${import.meta.env.BASE_URL}models/fenetre.glb`)
 
   // Copie la map sur emissiveMap pour que la texture soit visible sans lumière externe
   useEffect(() => {
@@ -72,5 +72,5 @@ export function Moon() {
   )
 }
 
-useGLTF.preload('/models/moon.glb')
-useGLTF.preload('/models/fenetre.glb')
+useGLTF.preload(`${import.meta.env.BASE_URL}models/moon.glb`)
+useGLTF.preload(`${import.meta.env.BASE_URL}models/fenetre.glb`)

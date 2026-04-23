@@ -11,7 +11,7 @@ useOSStore.getState().setScreenSize(window.innerWidth, window.innerHeight)
 // Click sound : joué directement dans l'iframe (zéro latence, pas de postMessage)
 const _clickCtx = new (window.AudioContext || window.webkitAudioContext)()
 let   _clickBuf = null
-fetch('/sounds/mouse.mp3')
+fetch(`${import.meta.env.BASE_URL}sounds/mouse.mp3`)
   .then(r => r.arrayBuffer())
   .then(ab => _clickCtx.decodeAudioData(ab))
   .then(buf => { _clickBuf = buf })

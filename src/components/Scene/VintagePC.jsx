@@ -76,7 +76,7 @@ function detectScreenMesh(scene) {
 //   • scale CSS = SCREEN_WORLD_W / DOM_W  (1 px CSS = 1 Three.js unit)
 //   • Décalage +Z = demi-profondeur du mesh + 2 mm (anti Z-fighting).
 export function VintagePC({ onMonitorEnter, onMonitorLeave, onScreenLeave, isFocused }) {
-  const { scene, nodes } = useGLTF('./models/vintage_pc.glb')
+  const { scene, nodes } = useGLTF(`${import.meta.env.BASE_URL}models/vintage_pc.glb`)
   const setScreenRef    = useWindowStore((s) => s.setScreenRef)
   const setScreenCenter = useWindowStore((s) => s.setScreenCenter)
   const [screenInfo, setScreenInfo] = useState(null)
@@ -193,4 +193,4 @@ export function VintagePC({ onMonitorEnter, onMonitorLeave, onScreenLeave, isFoc
   )
 }
 
-useGLTF.preload('./models/vintage_pc.glb')
+useGLTF.preload(`${import.meta.env.BASE_URL}models/vintage_pc.glb`)

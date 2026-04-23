@@ -38,7 +38,7 @@ export const win95sounds = {
   startup:  () => {
     // Uses Audio element (not Web Audio API) — startup.mp3 is a recorded chime, not synthesised.
     try {
-      const a = new Audio('/sounds/startup.mp3')
+      const a = new Audio(`${import.meta.env.BASE_URL}sounds/startup.mp3`)
       a.volume = 0.6
       a.play().catch(() => {})
     } catch (_) {}

@@ -1909,3 +1909,201 @@ button {
   outline: 2px dotted #000080;
   background: rgba(0, 0, 128, 0.15);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   FILE EXPLORER — LAYOUT AVEC SIDEBAR
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-fileexplorer-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.win95-fileexplorer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #808080;
+}
+
+.win95-toolbar-btn {
+  box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+  padding: 1px 6px;
+  font-family: var(--w-font);
+  font-size: 11px;
+  background: var(--w-surface);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.win95-toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.win95-toolbar-btn:active:not(:disabled) {
+  box-shadow: inset 1px 1px #000, inset -1px -1px #fff, inset 2px 2px #808080, inset -2px -2px #dfdfdf;
+}
+
+.win95-addr-bar {
+  flex: 1;
+  box-shadow: var(--border-sunken);
+  padding: 1px 4px;
+  font-family: var(--w-font);
+  font-size: 11px;
+  background: #fff;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.win95-fileexplorer-split {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.win95-fileexplorer-sidebar {
+  width: 160px;
+  flex-shrink: 0;
+  border-right: 1px solid #808080;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--w-surface);
+  padding: 2px 0;
+}
+
+.win95-fileexplorer-main {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  background: #fff;
+}
+
+.win95-fileexplorer-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px;
+  border-top: 1px solid #808080;
+  font-family: var(--w-font);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TREE VIEW (SIDEBAR)
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-tree-node {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 0;
+  cursor: pointer;
+  font-family: var(--w-font);
+  font-size: 11px;
+  white-space: nowrap;
+  user-select: none;
+}
+.win95-tree-node:hover {
+  background: #000080;
+  color: #fff;
+}
+.win95-tree-node.active {
+  background: #000080;
+  color: #fff;
+}
+
+.win95-tree-toggle {
+  display: inline-block;
+  width: 12px;
+  font-size: 8px;
+  text-align: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.win95-tree-icon {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VUE DÉTAILS
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--w-font);
+  font-size: 11px;
+}
+
+.win95-details-th {
+  background: var(--w-surface);
+  box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+  padding: 1px 6px;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+.win95-details-th:hover {
+  background: #dfdfdf;
+}
+
+.win95-details-td {
+  padding: 1px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.win95-details-row {
+  cursor: default;
+}
+.win95-details-row:hover td {
+  background: #000080;
+  color: #fff;
+}
+.win95-details-row.selected td {
+  background: #000080;
+  color: #fff;
+}
+
+.win95-details-icon {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOGGLE BOUTONS VUE
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-view-toggle {
+  display: flex;
+  gap: 2px;
+}
+.win95-view-btn {
+  box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+  padding: 1px 6px;
+  font-family: var(--w-font);
+  font-size: 11px;
+  background: var(--w-surface);
+  cursor: pointer;
+}
+.win95-view-btn.active {
+  box-shadow: inset 1px 1px #000, inset -1px -1px #fff, inset 2px 2px #808080, inset -2px -2px #dfdfdf;
+  background: #dfdfdf;
+}

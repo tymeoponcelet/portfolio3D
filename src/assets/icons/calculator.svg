@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Body -->
+  <rect x="4" y="2" width="24" height="28" rx="1" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
+  <!-- Display -->
+  <rect x="6" y="4" width="20" height="7" fill="#c8e8c8" stroke="#808080" stroke-width="1"/>
+  <text x="24" y="10" font-size="6" text-anchor="end" font-family="monospace" fill="#000">0.</text>
+  <!-- Buttons row 1 -->
+  <rect x="6"  y="13" width="5" height="4" fill="#dfdfdf" stroke="#808080" stroke-width="0.5"/>
+  <rect x="12" y="13" width="5" height="4" fill="#dfdfdf" stroke="#808080" stroke-width="0.5"/>
+  <rect x="18" y="13" width="5" height="4" fill="#dfdfdf" stroke="#808080" stroke-width="0.5"/>
+  <rect x="24" y="13" width="3" height="4" fill="#f0a0a0" stroke="#808080" stroke-width="0.5"/>
+  <!-- Buttons row 2 -->
+  <rect x="6"  y="18" width="5" height="4" fill="#dfdfdf" stroke="#808080" stroke-width="0.5"/>
+  <rect x="12" y="18" width="5" height="4" fill="#dfdfdf" stroke="#808080" stroke-width="0.5"/>
+  <rect x="18" y="18" width="5" height="4" fill="#dfdfdf" stroke="#808080" stroke-width="0.5"/>
+  <rect x="24" y="18" width="3" height="4" fill="#dfdfdf" stroke="#808080" stroke-width="0.5"/>
+  <!-- Buttons row 3 -->
+  <rect x="6"  y="23" width="5" height="4" fill="#dfdfdf" stroke="#808080" stroke-width="0.5"/>
+  <rect x="12" y="23" width="5" height="4" fill="#dfdfdf" stroke="#808080" stroke-width="0.5"/>
+  <rect x="18" y="23" width="5" height="4" fill="#dfdfdf" stroke="#808080" stroke-width="0.5"/>
+  <rect x="24" y="23" width="3" height="9" fill="#a0a0f0" stroke="#808080" stroke-width="0.5"/>
+</svg>

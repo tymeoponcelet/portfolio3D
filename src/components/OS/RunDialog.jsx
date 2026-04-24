@@ -30,16 +30,38 @@ export function RunDialog() {
   const triggerShutdown = useOSStore((s) => s.triggerShutdown)
   const setWallpaper   = useOSStore((s) => s.setWallpaper)
 
-  const [cmd,   setCmd]   = useState('')
-  const [error, setError] = useState('')
-  const inputRef = useRef(null)
+  const [cmd,       setCmd]       = useState('')
+  const [error,     setError]     = useState('')
+  const [dialogPos, setDialogPos] = useState(null)
+  const inputRef  = useRef(null)
+  const dialogRef = useRef(null)
 
   useEffect(() => {
     if (runDialogOpen) {
       setError('')
+      setDialogPos(null)   // recentre à chaque ouverture
       setTimeout(() => inputRef.current?.focus(), 50)
     }
   }, [runDialogOpen])
+
+  const handleTitleMouseDown = useCallback((e) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const rect = dialogRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const offX = e.clientX - rect.left
+    const offY = e.clientY - rect.top
+
+    const onMove = (me) => {
+      setDialogPos({ left: me.clientX - offX, top: me.clientY - offY })
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup',   onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup',   onUp)
+  }, [])
 
   const execute = useCallback(() => {
     const trimmed = cmd.trim()
@@ -86,13 +108,18 @@ export function RunDialog() {
 
   if (!runDialogOpen) return null
 
+  const posStyle = dialogPos
+    ? { top: dialogPos.top, left: dialogPos.left, transform: 'none' }
+    : {}
+
   return (
-    <div className="win95-run-dialog" onKeyDown={handleKeyDown}>
+    <div ref={dialogRef} className="win95-run-dialog" style={posStyle} onKeyDown={handleKeyDown}>
       {/* ── Title bar ── */}
-      <div className="win95-titlebar">
+      <div className="win95-titlebar" onMouseDown={handleTitleMouseDown} style={{ cursor: 'move' }}>
         <span className="win95-titlebar-title">Exécuter</span>
         <button
           className="win95-titlebar-btn"
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={() => { win95sounds.click(); closeRunDialog() }}
         >
           ✕

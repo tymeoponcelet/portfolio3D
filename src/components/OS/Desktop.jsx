@@ -14,6 +14,8 @@ import { IconContextMenu }                          from './IconContextMenu'
 import { TrashContextMenu }                         from './TrashContextMenu'
 import { RunDialog }                                from './RunDialog'
 import { wallpaperToStyle }                         from '../../utils/wallpaper'
+import { Calculator }                               from './apps/Calculator'
+import { WallpaperPicker }                          from './apps/WallpaperPicker'
 
 const SHOWCASE_WINDOW = {
   appId:   'showcase',
@@ -42,6 +44,24 @@ const TRASH_WINDOW = {
   content: <FileExplorer folderId="trash" folderName="Corbeille" />,
 }
 
+const CALC_WINDOW = {
+  appId:  'calculator',
+  title:  'Calculatrice',
+  icon:   '🧮',
+  width:  240,
+  height: 300,
+  content: <Calculator />,
+}
+
+const WALLPAPER_WINDOW = {
+  appId:  'wallpaper',
+  title:  "Propriétés de l'affichage",
+  icon:   '🖼️',
+  width:  400,
+  height: 320,
+  content: <WallpaperPicker />,
+}
+
 export const ICONS = [
   {
     id:      'showcase',
@@ -49,6 +69,20 @@ export const ICONS = [
     iconSrc: icons.showcaseIcon,
     pos:     { top: 6, left: 10 },
     window:  SHOWCASE_WINDOW,
+  },
+  {
+    id:      'calculator',
+    label:   'Calculatrice',
+    iconSrc: icons.calculatorIcon,
+    pos:     { top: 170, left: 10 },
+    window:  CALC_WINDOW,
+  },
+  {
+    id:      'wallpaper',
+    label:   'Affichage',
+    iconSrc: icons.wallpaperIcon,
+    pos:     { top: 250, left: 10 },
+    window:  WALLPAPER_WINDOW,
   },
 ]
 

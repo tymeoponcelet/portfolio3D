@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Monitor body -->
+  <rect x="2" y="2" width="28" height="20" rx="1" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
+  <!-- Screen -->
+  <rect x="4" y="4" width="24" height="16" fill="#008080"/>
+  <!-- Teal pattern on screen -->
+  <rect x="4"  y="4"  width="6" height="4" fill="#006060"/>
+  <rect x="10" y="4"  width="6" height="4" fill="#00a0a0"/>
+  <rect x="16" y="4"  width="6" height="4" fill="#006060"/>
+  <rect x="22" y="4"  width="6" height="4" fill="#00a0a0"/>
+  <rect x="4"  y="12" width="6" height="4" fill="#00a0a0"/>
+  <rect x="10" y="12" width="6" height="4" fill="#006060"/>
+  <rect x="16" y="12" width="6" height="4" fill="#00a0a0"/>
+  <rect x="22" y="12" width="6" height="4" fill="#006060"/>
+  <!-- Monitor stand -->
+  <rect x="12" y="22" width="8" height="3" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
+  <rect x="9"  y="25" width="14" height="3" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
+</svg>

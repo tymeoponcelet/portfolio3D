@@ -4,6 +4,8 @@ import folder             from './folder.png'
 import txtfile            from './txtfile.png'
 import trashEmpty         from './trashEmpty.svg'
 import trashFull          from './trashFull.svg'
+import calculatorIcon     from './calculator.svg'
+import wallpaperIcon      from './wallpaper.svg'
 import showcaseIcon       from './showcaseIcon.png'
 import windowExplorerIcon from './windowExplorerIcon.png'
 import computerBig        from './computerBig.png'
@@ -20,6 +22,8 @@ export const icons = {
   txtfile,
   trashEmpty,
   trashFull,
+  calculatorIcon,
+  wallpaperIcon,
   showcaseIcon,
   windowExplorerIcon,
   computerBig,

@@ -194,12 +194,12 @@ export function Desktop() {
   const openProperties = useCallback(() => { openWindow(PROPERTIES_WINDOW) }, [openWindow])
 
   const handleCreateFolder = useCallback(() => {
-    const id = createItem('folder', null, { x: 10, y: 90 + desktopFsItems.length * 72 })
+    const id = createItem('folder', null, { x: 10, y: 170 + desktopFsItems.length * 72 })
     setRenamingId(id)
   }, [createItem, desktopFsItems.length])
 
   const handleCreateFile = useCallback(() => {
-    const id = createItem('file', null, { x: 10, y: 90 + desktopFsItems.length * 72 })
+    const id = createItem('file', null, { x: 10, y: 170 + desktopFsItems.length * 72 })
     setRenamingId(id)
   }, [createItem, desktopFsItems.length])
 

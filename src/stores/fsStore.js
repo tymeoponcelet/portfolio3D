@@ -98,8 +98,18 @@ export const useFsStore = create(
 
       emptyTrash: () => {
         set((s) => {
-          const directIds = s.items.filter((i) => i.parentId === 'trash').map((i) => i.id)
-          const toDelete  = new Set(directIds.flatMap((id) => collectDescendants(s.items, id)))
+          const toDelete = new Set()
+          s.items.filter((i) => i.parentId === 'trash').forEach((i) => toDelete.add(i.id))
+          let changed = true
+          while (changed) {
+            changed = false
+            s.items.forEach((i) => {
+              if (!toDelete.has(i.id) && i.parentId && toDelete.has(i.parentId)) {
+                toDelete.add(i.id)
+                changed = true
+              }
+            })
+          }
           return { items: s.items.filter((i) => !toDelete.has(i.id)) }
         })
       },

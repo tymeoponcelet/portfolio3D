@@ -2107,3 +2107,134 @@ button {
   box-shadow: inset 1px 1px #000, inset -1px -1px #fff, inset 2px 2px #808080, inset -2px -2px #dfdfdf;
   background: #dfdfdf;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   RUN DIALOG
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-run-dialog {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 360px;
+  background: var(--w-surface);
+  box-shadow: inset -1px -1px #000, inset 1px 1px #fff,
+              inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+  z-index: 10000;
+}
+
+.win95-run-input {
+  flex: 1;
+  box-shadow: var(--border-sunken);
+  padding: 2px 4px;
+  font-family: var(--w-font);
+  font-size: 11px;
+  background: #fff;
+  border: none;
+  outline: none;
+  min-width: 0;
+}
+
+.win95-run-error {
+  color: #cc0000;
+  font-family: var(--w-font);
+  font-size: 11px;
+  margin: 0;
+  word-break: break-word;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CALCULATOR
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-calc-display {
+  width: 100%;
+  text-align: right;
+  font-family: var(--w-font);
+  font-size: 16px;
+  padding: 2px 6px;
+  background: #ffffff;
+  box-shadow: var(--border-sunken);
+  box-sizing: border-box;
+  min-height: 24px;
+  overflow: hidden;
+  white-space: nowrap;
+  display: block;
+}
+
+.win95-calc-grid {
+  display: grid;
+  gap: 3px;
+  padding: 4px;
+}
+
+.win95-calc-btn {
+  box-shadow: inset -1px -1px #000, inset 1px 1px #fff,
+              inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+  background: var(--w-surface);
+  font-family: var(--w-font);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 3px 2px;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+.win95-calc-btn:active {
+  box-shadow: inset 1px 1px #000, inset -1px -1px #fff,
+              inset 2px 2px #808080, inset -2px -2px #dfdfdf;
+}
+.win95-calc-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.win95-calc-btn-fn {
+  background: #dfdfdf;
+  font-size: 10px;
+}
+
+.win95-calc-btn-eq {
+  background: var(--w-surface);
+  font-weight: bold;
+  font-size: 13px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WALLPAPER PICKER
+   ═══════════════════════════════════════════════════════════════ */
+
+.win95-wallpaper-preview {
+  width: 80px;
+  height: 60px;
+  box-shadow: var(--border-sunken);
+  flex-shrink: 0;
+}
+
+.win95-wallpaper-list {
+  flex: 1;
+  overflow-y: auto;
+  box-shadow: var(--border-sunken);
+  background: #ffffff;
+  min-height: 0;
+}
+
+.win95-wallpaper-item {
+  padding: 2px 8px;
+  font-family: var(--w-font);
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.win95-wallpaper-item:hover {
+  background: #000080;
+  color: #ffffff;
+}
+.win95-wallpaper-item.sel {
+  background: #000080;
+  color: #ffffff;
+}

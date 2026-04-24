@@ -5,6 +5,9 @@ import { useOSStore }      from '../../../stores/osStore'
 import { DynamicIcon }     from '../DynamicIcon'
 import { IconContextMenu } from '../IconContextMenu'
 import { Notepad }         from './Notepad'
+import { ShowcaseExplorer } from './ShowcaseExplorer'
+import { Calculator }       from './Calculator'
+import { WallpaperPicker }  from './WallpaperPicker'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -52,6 +55,52 @@ function sortItems(items, key, dir) {
   })
 }
 
+// ── Static shortcut icon (bureau view) ────────────────────────────────────
+
+function StaticShortcut({ item, index, isSelected, onSelect, onOpen }) {
+  const timerRef = useRef(null)
+
+  const handleMouseDown = useCallback((e) => {
+    e.stopPropagation()
+    if (e.button !== 0) return
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+      onOpen()
+      return
+    }
+    onSelect(item.id)
+    timerRef.current = setTimeout(() => { timerRef.current = null }, 300)
+  }, [item.id, onSelect, onOpen])
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
+
+  return (
+    <button
+      className={`win95-shortcut${isSelected ? ' selected' : ''}`}
+      style={{
+        position: 'absolute',
+        top:  8 + Math.floor(index / 3) * 80,
+        left: 8 + (index % 3) * 80,
+      }}
+      onMouseDown={handleMouseDown}
+      onClick={(e) => e.stopPropagation()}
+      aria-label={item.name}
+    >
+      <div className="win95-shortcut-icon-wrap">
+        {isSelected && (
+          <div
+            className="win95-shortcut-overlay"
+            style={{ WebkitMaskImage: `url(${item.iconSrc})` }}
+          />
+        )}
+        <img src={item.iconSrc} alt="" className="win95-shortcut-img" />
+      </div>
+      <span className="win95-shortcut-label">{item.name}</span>
+    </button>
+  )
+}
+
 // ── Tree sidebar ──────────────────────────────────────────────────────────
 
 function FolderTreeNode({ folder, allItems, depth, currentFolderId, expandedIds, onToggle, onNavigate }) {
@@ -97,9 +146,10 @@ function FolderTreeNode({ folder, allItems, depth, currentFolderId, expandedIds,
 }
 
 function BureauNode({ allItems, currentFolderId, expandedIds, onToggle, onNavigate }) {
-  const children   = allItems.filter((i) => i.type === 'folder' && i.parentId === null && !i.system)
-  const isExpanded = expandedIds.has('__bureau__')
-  const isActive   = currentFolderId === null
+  const userFolders = allItems.filter((i) => i.type === 'folder' && i.parentId === null && !i.system)
+  const trashItem   = allItems.find((i) => i.id === 'trash')
+  const isExpanded  = expandedIds.has('__bureau__')
+  const isActive    = currentFolderId === null
 
   return (
     <>
@@ -110,27 +160,40 @@ function BureauNode({ allItems, currentFolderId, expandedIds, onToggle, onNaviga
       >
         <span
           className="win95-tree-toggle"
-          onClick={children.length > 0
-            ? (e) => { e.stopPropagation(); onToggle('__bureau__') }
-            : undefined}
+          onClick={(e) => { e.stopPropagation(); onToggle('__bureau__') }}
         >
-          {children.length > 0 ? (isExpanded ? '▼' : '▶') : ''}
+          {isExpanded ? '▼' : '▶'}
         </span>
         <img src={icons.folder} alt="" className="win95-tree-icon" />
         <span style={{ marginLeft: 3 }}>Bureau</span>
       </div>
-      {isExpanded && children.map((folder) => (
-        <FolderTreeNode
-          key={folder.id}
-          folder={folder}
-          allItems={allItems}
-          depth={1}
-          currentFolderId={currentFolderId}
-          expandedIds={expandedIds}
-          onToggle={onToggle}
-          onNavigate={onNavigate}
-        />
-      ))}
+      {isExpanded && (
+        <>
+          {userFolders.map((folder) => (
+            <FolderTreeNode
+              key={folder.id}
+              folder={folder}
+              allItems={allItems}
+              depth={1}
+              currentFolderId={currentFolderId}
+              expandedIds={expandedIds}
+              onToggle={onToggle}
+              onNavigate={onNavigate}
+            />
+          ))}
+          {trashItem && (
+            <FolderTreeNode
+              folder={trashItem}
+              allItems={allItems}
+              depth={1}
+              currentFolderId={currentFolderId}
+              expandedIds={expandedIds}
+              onToggle={onToggle}
+              onNavigate={onNavigate}
+            />
+          )}
+        </>
+      )}
     </>
   )
 }
@@ -150,11 +213,11 @@ export function FileExplorer({ folderId }) {
   const [renamingId,      setRenamingId]      = useState(null)
   const [drag,            setDrag]            = useState(null)
   const [iconContextMenu, setIconContextMenu] = useState(null)
-  const [expandedIds,     setExpandedIds]     = useState(() => new Set(['__bureau__']))
+  const [expandedIds,     setExpandedIds]     = useState(() => new Set())
 
   const containerRef = useRef(null)
 
-  const isInTrash     = (() => {
+  const isInTrash   = (() => {
     let id = currentFolderId
     while (id) {
       if (id === 'trash') return true
@@ -162,13 +225,24 @@ export function FileExplorer({ folderId }) {
     }
     return false
   })()
-  const currentItem   = allItems.find((i) => i.id === currentFolderId)
-  const parentId      = currentItem?.parentId ?? null
-  const canGoUp       = currentFolderId !== null && currentFolderId !== 'trash'
+  const currentItem  = allItems.find((i) => i.id === currentFolderId)
+  const parentId     = currentItem?.parentId ?? null
+  const canGoUp      = currentFolderId !== null && currentFolderId !== 'trash'
   const addressPath  = buildPath(allItems, currentFolderId)
   const rawItems     = allItems.filter((i) => i.parentId === currentFolderId && !i.system)
   const displayItems = sortItems(rawItems, sortKey, sortDir)
-  const trashFolder  = allItems.find((i) => i.id === 'trash')
+
+  // Virtual static shortcuts shown only in the Bureau view
+  const trashFull = allItems.some((i) => i.parentId === 'trash')
+  const virtualBureauItems = currentFolderId === null ? [
+    { id: '__showcase__',   type: 'virtual', name: 'Portfolio',    iconSrc: icons.showcaseIcon   },
+    { id: '__trash__',      type: 'virtual', name: 'Corbeille',    iconSrc: trashFull ? icons.trashFull : icons.trashEmpty },
+    { id: '__explorer__',   type: 'virtual', name: 'Explorateur',  iconSrc: icons.explorerIcon   },
+    { id: '__calculator__', type: 'virtual', name: 'Calculatrice', iconSrc: icons.calculatorIcon },
+    { id: '__wallpaper__',  type: 'virtual', name: 'Affichage',    iconSrc: icons.wallpaperIcon  },
+  ] : []
+
+  const allDisplayItems = [...virtualBureauItems, ...displayItems]
 
   // ── Drag-and-drop ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -262,6 +336,26 @@ export function FileExplorer({ folderId }) {
     }
   }, [openWindow, handleNavigate])
 
+  const handleOpenVirtualItem = useCallback((id) => {
+    switch (id) {
+      case '__showcase__':
+        openWindow({ appId: 'showcase', title: 'Portfolio — Tyméo Poncelet', icon: '🖥️', width: 780, height: 540, content: <ShowcaseExplorer /> })
+        break
+      case '__explorer__':
+        openWindow({ appId: 'desktop-explorer', title: 'Explorateur', icon: '📁', width: 480, height: 340, content: <FileExplorer folderId={null} /> })
+        break
+      case '__calculator__':
+        openWindow({ appId: 'calculator', title: 'Calculatrice', icon: '🧮', width: 240, height: 300, content: <Calculator /> })
+        break
+      case '__wallpaper__':
+        openWindow({ appId: 'wallpaper', title: "Propriétés de l'affichage", icon: '🖼️', width: 400, height: 320, content: <WallpaperPicker /> })
+        break
+      case '__trash__':
+        openWindow({ appId: 'trash-explorer', title: 'Corbeille', icon: '🗑️', width: 480, height: 340, content: <FileExplorer folderId="trash" /> })
+        break
+    }
+  }, [openWindow])
+
   const handleSelect         = useCallback((id) => setSelectedId(id), [])
   const handleRenameStart    = useCallback((id) => setRenamingId(id), [])
   const handleRenameConfirm  = useCallback((id, name) => { renameItem(id, name); setRenamingId(null) }, [renameItem])
@@ -321,49 +415,52 @@ export function FileExplorer({ folderId }) {
             onToggle={handleToggleExpand}
             onNavigate={handleNavigate}
           />
-          {trashFolder && (
-            <FolderTreeNode
-              folder={trashFolder}
-              allItems={allItems}
-              depth={0}
-              currentFolderId={currentFolderId}
-              expandedIds={expandedIds}
-              onToggle={handleToggleExpand}
-              onNavigate={handleNavigate}
-            />
-          )}
         </div>
 
         {/* Main view */}
         <div className="win95-fileexplorer-main" onClick={handleBodyClick}>
-          {displayItems.length === 0 && (
+          {allDisplayItems.length === 0 && (
             <p style={{ color: '#808080', fontSize: 11, padding: 16, fontFamily: 'var(--w-font)' }}>
               Ce dossier est vide.
             </p>
           )}
 
-          {viewMode === 'icons' && displayItems.map((item, index) => (
-            <DynamicIcon
-              key={item.id}
-              item={item}
-              style={{
-                position: 'absolute',
-                top:      8 + Math.floor(index / 3) * 80,
-                left:     8 + (index % 3) * 80,
-                opacity:  drag?.id === item.id ? 0.3 : 1,
-              }}
-              isSelected={selectedId === item.id}
-              isRenaming={renamingId === item.id}
-              isDropTarget={drag?.dropTarget === item.id}
-              onSelect={handleSelect}
-              onOpen={handleOpenItem}
-              onRenameStart={handleRenameStart}
-              onRenameConfirm={handleRenameConfirm}
-              onRenameCancel={handleRenameCancel}
-              onDragStart={handleDragStart}
-              onContextMenu={handleIconContextMenu}
-            />
-          ))}
+          {viewMode === 'icons' && allDisplayItems.map((item, index) => {
+            if (item.type === 'virtual') {
+              return (
+                <StaticShortcut
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  isSelected={selectedId === item.id}
+                  onSelect={handleSelect}
+                  onOpen={() => handleOpenVirtualItem(item.id)}
+                />
+              )
+            }
+            return (
+              <DynamicIcon
+                key={item.id}
+                item={item}
+                style={{
+                  position: 'absolute',
+                  top:      8 + Math.floor(index / 3) * 80,
+                  left:     8 + (index % 3) * 80,
+                  opacity:  drag?.id === item.id ? 0.3 : 1,
+                }}
+                isSelected={selectedId === item.id}
+                isRenaming={renamingId === item.id}
+                isDropTarget={drag?.dropTarget === item.id}
+                onSelect={handleSelect}
+                onOpen={handleOpenItem}
+                onRenameStart={handleRenameStart}
+                onRenameConfirm={handleRenameConfirm}
+                onRenameCancel={handleRenameCancel}
+                onDragStart={handleDragStart}
+                onContextMenu={handleIconContextMenu}
+              />
+            )
+          })}
 
           {viewMode === 'details' && (
             <table className="win95-details-table">
@@ -381,28 +478,28 @@ export function FileExplorer({ folderId }) {
                 </tr>
               </thead>
               <tbody>
-                {displayItems.map((item) => (
+                {allDisplayItems.map((item) => (
                   <tr
                     key={item.id}
                     className={`win95-details-row${selectedId === item.id ? ' selected' : ''}`}
                     onClick={(e) => { e.stopPropagation(); handleSelect(item.id) }}
-                    onDoubleClick={() => handleOpenItem(item)}
-                    onContextMenu={(e) => {
+                    onDoubleClick={() => item.type === 'virtual' ? handleOpenVirtualItem(item.id) : handleOpenItem(item)}
+                    onContextMenu={item.type !== 'virtual' ? (e) => {
                       e.preventDefault()
                       e.stopPropagation()
                       handleIconContextMenu(item, e.clientX, e.clientY)
-                    }}
+                    } : undefined}
                   >
                     <td className="win95-details-td">
                       <img
-                        src={item.type === 'folder' ? icons.folder : icons.txtfile}
+                        src={item.type === 'virtual' ? item.iconSrc : (item.type === 'folder' ? icons.folder : icons.txtfile)}
                         alt=""
                         className="win95-details-icon"
                       />
                       {item.name}
                     </td>
-                    <td className="win95-details-td">{formatType(item)}</td>
-                    <td className="win95-details-td">{formatSize(item)}</td>
+                    <td className="win95-details-td">{item.type === 'virtual' ? 'Raccourci' : formatType(item)}</td>
+                    <td className="win95-details-td">{item.type === 'virtual' ? '—' : formatSize(item)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -429,7 +526,7 @@ export function FileExplorer({ folderId }) {
             ☰
           </button>
         </div>
-        <span>{displayItems.length} élément{displayItems.length !== 1 ? 's' : ''}</span>
+        <span>{allDisplayItems.length} élément{allDisplayItems.length !== 1 ? 's' : ''}</span>
       </div>
 
       {/* ── Drag ghost ── */}

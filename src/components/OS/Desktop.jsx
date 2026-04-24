@@ -18,7 +18,6 @@ import { Calculator }                               from './apps/Calculator'
 import { WallpaperPicker }                          from './apps/WallpaperPicker'
 import { MsPaint }                                  from './apps/MsPaint'
 import { Minesweeper }                              from './apps/Minesweeper'
-import { CsgoLegacy }                              from './apps/CsgoLegacy'
 
 const SHOWCASE_WINDOW = {
   appId:   'showcase',
@@ -92,14 +91,6 @@ const MINESWEEPER_WINDOW = {
   content: <Minesweeper />,
 }
 
-const CSGO_WINDOW = {
-  appId:  'csgo',
-  title:  'CS:GO Legacy',
-  icon:   '🔫',
-  width:  640,
-  height: 420,
-  content: <CsgoLegacy />,
-}
 
 export const ICONS = [
   {
@@ -143,13 +134,6 @@ export const ICONS = [
     iconSrc: icons.minesweeperIcon,
     pos:     { top: 90, left: 90 },
     window:  MINESWEEPER_WINDOW,
-  },
-  {
-    id:      'csgo',
-    label:   'CS:GO Legacy',
-    iconSrc: icons.csgoIcon,
-    pos:     { top: 170, left: 90 },
-    window:  CSGO_WINDOW,
   },
 ]
 

@@ -23,8 +23,8 @@ export const useFsStore = create(
     (set, get) => ({
       items: [TRASH_ITEM],
 
-      createItem: (type, parentId, pos = null) => {
-        const base = type === 'folder' ? 'Nouveau dossier' : 'Nouveau document texte.txt'
+      createItem: (type, parentId, pos = null, initialName = null) => {
+        const base = initialName ?? (type === 'folder' ? 'Nouveau dossier' : 'Nouveau document texte.txt')
         const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
         set((s) => {
           const name = uniqueName(s.items, parentId, base)
@@ -33,7 +33,7 @@ export const useFsStore = create(
               id, type, name,
               parentId: parentId ?? null,
               pos:      pos ?? null,
-              ...(type === 'file' ? { content: '' } : {}),
+              ...(type === 'file' || type === 'image' ? { content: '' } : {}),
             }],
           }
         })

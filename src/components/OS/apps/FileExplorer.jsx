@@ -10,7 +10,7 @@ import { Calculator }       from './Calculator'
 import { WallpaperPicker }  from './WallpaperPicker'
 import { MsPaint }          from './MsPaint'
 import { Minesweeper }      from './Minesweeper'
-import { CsgoLegacy }       from './CsgoLegacy'
+
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -38,7 +38,9 @@ function formatSize(item) {
 }
 
 function formatType(item) {
-  return item.type === 'folder' ? 'Dossier' : 'Fichier texte'
+  if (item.type === 'folder') return 'Dossier'
+  if (item.type === 'image' || /\.(png|bmp|jpg|jpeg|gif)$/i.test(item.name ?? '')) return 'Image PNG'
+  return 'Fichier texte'
 }
 
 function sortItems(items, key, dir) {
@@ -245,7 +247,6 @@ export function FileExplorer({ folderId }) {
     { id: '__wallpaper__',   type: 'virtual', name: 'Affichage',    iconSrc: icons.wallpaperIcon   },
     { id: '__paint__',       type: 'virtual', name: 'Paint',        iconSrc: icons.paintIcon       },
     { id: '__minesweeper__', type: 'virtual', name: 'Démineur',     iconSrc: icons.minesweeperIcon },
-    { id: '__csgo__',        type: 'virtual', name: 'CS:GO Legacy', iconSrc: icons.csgoIcon        },
   ] : []
 
   const allDisplayItems = [...virtualBureauItems, ...displayItems]
@@ -377,9 +378,6 @@ export function FileExplorer({ folderId }) {
         break
       case '__minesweeper__':
         openWindow({ appId: 'minesweeper', title: 'Démineur', icon: '💣', width: 240, height: 320, content: <Minesweeper /> })
-        break
-      case '__csgo__':
-        openWindow({ appId: 'csgo', title: 'CS:GO Legacy', icon: '🔫', width: 640, height: 420, content: <CsgoLegacy /> })
         break
     }
   }, [openWindow])
@@ -520,7 +518,7 @@ export function FileExplorer({ folderId }) {
                   >
                     <td className="win95-details-td">
                       <img
-                        src={item.type === 'virtual' ? item.iconSrc : (item.type === 'folder' ? icons.folder : icons.txtfile)}
+                        src={item.type === 'virtual' ? item.iconSrc : item.type === 'folder' ? icons.folder : (item.type === 'image' || /\.(png|bmp|jpg|jpeg|gif)$/i.test(item.name ?? '')) ? icons.paintIcon : icons.txtfile}
                         alt=""
                         className="win95-details-icon"
                       />
@@ -563,7 +561,7 @@ export function FileExplorer({ folderId }) {
           className="win95-drag-ghost"
           style={{ left: drag.clientX - drag.offsetX, top: drag.clientY - drag.offsetY }}
         >
-          <img src={draggedItem.type === 'folder' ? icons.folder : icons.txtfile} alt="" />
+          <img src={draggedItem.type === 'folder' ? icons.folder : (draggedItem.type === 'image' || /\.(png|bmp|jpg|jpeg|gif)$/i.test(draggedItem.name ?? '')) ? icons.paintIcon : icons.txtfile} alt="" />
           <span>{draggedItem.name}</span>
         </div>
       )}

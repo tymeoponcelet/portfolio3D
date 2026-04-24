@@ -95,7 +95,6 @@ export function MsPaint({ initialFileId }) {
   const [pickingBg, setPickingBg] = useState(false)  // true = next palette click sets bg
 
   const createItem    = useFsStore((s) => s.createItem)
-  const renameItem    = useFsStore((s) => s.renameItem)
   const updateContent = useFsStore((s) => s.updateContent)
 
   // Init white canvas
@@ -177,10 +176,10 @@ export function MsPaint({ initialFileId }) {
   const handleExport = useCallback(() => {
     const canvas  = canvasRef.current
     const dataUrl = canvas.toDataURL('image/png')
-    const id      = createItem('file', null, { x: 80, y: 170 })
-    renameItem(id, 'dessin.bmp')
+    const stamp   = new Date().toLocaleTimeString('fr', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/:/g, 'h')
+    const id      = createItem('image', null, { x: 80, y: 170 }, `dessin_${stamp}.png`)
     updateContent(id, dataUrl)
-  }, [createItem, renameItem, updateContent])
+  }, [createItem, updateContent])
 
   const handleClear = useCallback(() => {
     const canvas = canvasRef.current

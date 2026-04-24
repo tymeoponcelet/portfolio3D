@@ -1,441 +1,530 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
 
-// ── Constants ──────────────────────────────────────────────────────────────
-const MAPS = ['de_dust2', 'de_inferno', 'de_nuke', 'de_mirage', 'de_cache']
-const CT_NAMES  = ['FaZe | karrigan', 'NaVi | s1mple', 'ENCE | allu', 'Astralis | dev1ce', 'G2 | kennyS']
-const T_NAMES   = ['Liquid | EliGE', 'NAVI | electronic', 'VP | Boombl4', 'Cloud9 | rush', 'mibr | fer']
-const WEAPONS   = ['AK-47', 'M4A1-S', 'AWP', 'DEAGLE', 'P250', 'MP9', 'UMP-45', 'SG 553']
-const KILL_MSGS = [' a tué ', ' a headshot ', ' a éliminé ']
+// ── Canvas resolution ──────────────────────────────────────────────────────
+const W = 480, H = 300
+const FOV        = Math.PI / 3   // 60°
+const MOVE_SPEED = 0.055
+const ROT_SPEED  = 0.002
 
-function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min }
-function randOf(arr) { return arr[Math.floor(Math.random() * arr.length)] }
+// ── Map  (0=vide, 1=mur béton, 2=mur caisse) ──────────────────────────────
+const MAP = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,2,2,0,0,0,0,1,0,0,0,0,1,0,0,0,2,2,0,1],
+  [1,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,1,0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,1,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,1,0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,1,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1],
+  [1,0,0,2,2,0,0,0,0,1,0,0,0,0,1,0,0,0,2,2,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+]
+const ROWS = MAP.length, COLS = MAP[0].length
 
-// ── Minimap canvas ─────────────────────────────────────────────────────────
-function Minimap({ players, phase }) {
-  const canvasRef = useRef(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    const W = canvas.width, H = canvas.height
-
-    // Background map (stylized top-down)
-    ctx.fillStyle = '#1a1a0a'
-    ctx.fillRect(0, 0, W, H)
-
-    // Dust2-like layout
-    ctx.strokeStyle = '#3a3a2a'
-    ctx.lineWidth   = 1
-
-    // Sites
-    ctx.fillStyle = '#2a2a1a'
-    ctx.fillRect(10, 10, 40, 40)   // A site
-    ctx.fillRect(90, 80, 40, 40)   // B site
-    ctx.fillRect(50, 45, 50, 5)    // mid
-    ctx.fillStyle = '#c8a000'
-    ctx.font = '7px monospace'
-    ctx.fillText('A', 26, 35)
-    ctx.fillText('B', 106, 105)
-
-    // Walls/corridors
-    ctx.fillStyle = '#333320'
-    ctx.fillRect(10, 50, 40, 30)
-    ctx.fillRect(50, 50, 5, 35)
-    ctx.fillRect(55, 75, 35, 5)
-    ctx.fillRect(90, 75, 5, 5)
-
-    // Bomb plant indicator
-    if (phase === 'bomb') {
-      ctx.fillStyle = '#ff4400'
-      ctx.font = '8px monospace'
-      ctx.fillText('★', 20, 30)
-    }
-
-    // Players
-    players.forEach((p) => {
-      ctx.beginPath()
-      ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2)
-      ctx.fillStyle = p.team === 'ct' ? '#4488ff' : '#ff8822'
-      ctx.fill()
-      if (!p.alive) {
-        ctx.strokeStyle = p.team === 'ct' ? '#224488' : '#884411'
-        ctx.lineWidth = 1
-        ctx.stroke()
-        ctx.fillStyle = '#000'
-        ctx.fill()
-      }
-    })
-  }, [players, phase])
-
-  return (
-    <canvas
-      ref={canvasRef}
-      width={140}
-      height={130}
-      style={{ display:'block', imageRendering:'pixelated', border:'1px solid #444' }}
-    />
-  )
+// ── Helpers ────────────────────────────────────────────────────────────────
+const solid = (x, y) => {
+  const mx = x | 0, my = y | 0
+  return mx < 0 || mx >= COLS || my < 0 || my >= ROWS || MAP[my][mx] > 0
 }
 
-// ── Player row ─────────────────────────────────────────────────────────────
-function PlayerRow({ name, kills, deaths, assists, adr, team, alive }) {
-  return (
-    <div style={{
-      display:'grid',
-      gridTemplateColumns:'1fr 28px 28px 28px 36px',
-      gap:2, padding:'1px 4px',
-      background: alive ? 'transparent' : 'rgba(0,0,0,0.3)',
-      opacity: alive ? 1 : 0.5,
-      borderBottom: '1px solid rgba(255,255,255,0.05)',
-    }}>
-      <span style={{ color: team==='ct' ? '#7cb8ff' : '#ffaa55', fontSize:10, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-        {alive ? '' : '✝ '}{name}
-      </span>
-      <span style={{ textAlign:'center', fontSize:10, color:'#eee' }}>{kills}</span>
-      <span style={{ textAlign:'center', fontSize:10, color:'#999' }}>{deaths}</span>
-      <span style={{ textAlign:'center', fontSize:10, color:'#777' }}>{assists}</span>
-      <span style={{ textAlign:'right',  fontSize:10, color:'#cc8' }}>{adr}</span>
-    </div>
-  )
+function castRay(px, py, angle) {
+  const dx = Math.cos(angle) || 1e-10
+  const dy = Math.sin(angle) || 1e-10
+  let mx = px | 0, my = py | 0
+  const dDx = Math.abs(1 / dx), dDy = Math.abs(1 / dy)
+  let sX = dx < 0 ? (px - mx) * dDx : (mx + 1 - px) * dDx
+  let sY = dy < 0 ? (py - my) * dDy : (my + 1 - py) * dDy
+  const stX = dx < 0 ? -1 : 1, stY = dy < 0 ? -1 : 1
+  let side = 0, wall = 0, safety = 0
+  while (!wall && safety++ < 80) {
+    if (sX < sY) { sX += dDx; mx += stX; side = 0 }
+    else         { sY += dDy; my += stY; side = 1 }
+    if (mx < 0 || mx >= COLS || my < 0 || my >= ROWS) { wall = 1; break }
+    wall = MAP[my][mx]
+  }
+  const dist = side === 0
+    ? (mx - px + (1 - stX) / 2) / dx
+    : (my - py + (1 - stY) / 2) / dy
+  return { dist: Math.max(0.01, dist), wall, side }
 }
+
+// ── Enemy factory ─────────────────────────────────────────────────────────
+let _eid = 0
+const mkEnemy = (x, y) => ({ id: _eid++, x, y, hp: 100, alive: true, stagger: 0 })
 
 // ── Main component ─────────────────────────────────────────────────────────
 export function CsgoLegacy() {
-  const [screen,  setScreen]  = useState('menu')   // menu | loading | ingame
-  const [map,     setMap]     = useState(MAPS[0])
-  const [score,   setScore]   = useState({ ct: 0, t: 0 })
-  const [round,   setRound]   = useState(1)
-  const [phase,   setPhase]   = useState('buy')     // buy | playing | bomb | end
-  const [timer,   setTimer]   = useState(15)
-  const [feed,    setFeed]    = useState([])
-  const [hp,      setHp]      = useState(100)
-  const [armor,   setArmor]   = useState(100)
-  const [ammo,    setAmmo]    = useState(30)
-  const [weapon,  setWeapon]  = useState('AK-47')
-  const [money,   setMoney]   = useState(3400)
-  const [loadPct, setLoadPct] = useState(0)
+  const canvasRef  = useRef(null)
+  const stateRef   = useRef(null)
+  const rafRef     = useRef(null)
+  const [phase,    setPhase]    = useState('menu')  // menu | playing | dead | win
+  const [hpUI,     setHpUI]     = useState(100)
+  const [ammoUI,   setAmmoUI]   = useState(30)
+  const [killsUI,  setKillsUI]  = useState(0)
+  const [locked,   setLocked]   = useState(false)
 
-  const tickRef    = useRef(null)
-  const eventRef   = useRef(null)
-
-  const [players, setPlayers] = useState(() => buildPlayers())
-  const playersRef = useRef(players)
-
-  function buildPlayers() {
-    return [
-      ...CT_NAMES.map((n, i) => ({ id:`ct${i}`, name:n, team:'ct', kills:0, deaths:0, assists:0, adr:rand(60,110), alive:true, x:rand(15,45), y:rand(15,45) })),
-      ...T_NAMES .map((n, i) => ({ id:`t${i}`,  name:n, team:'t',  kills:0, deaths:0, assists:0, adr:rand(60,110), alive:true, x:rand(92,128), y:rand(82,115) })),
-    ]
-  }
-
-  const addFeed = useCallback((msg) => {
-    setFeed((f) => [{ id: Date.now() + Math.random(), msg }, ...f].slice(0, 8))
+  // ── Start game ────────────────────────────────────────────────────────────
+  const startGame = useCallback(() => {
+    stateRef.current = {
+      player: { x: 1.5, y: 1.5, angle: 0.3, hp: 100, ammo: 30, kills: 0, reloading: 0 },
+      enemies: [
+        mkEnemy(10, 6.5), mkEnemy(15, 2.5), mkEnemy(18, 10), mkEnemy(5, 10),
+        mkEnemy(10, 11),  mkEnemy(3, 6.5),  mkEnemy(18, 6.5),
+      ],
+      keys: {},
+      flash: 0,   // muzzle flash
+      hit: 0,     // red hit vignette
+    }
+    setHpUI(100); setAmmoUI(30); setKillsUI(0)
+    setPhase('playing')
   }, [])
 
-  // ── Loading sequence ──────────────────────────────────────────────────────
-  const startLoading = useCallback(() => {
-    setScreen('loading')
-    setLoadPct(0)
-    let p = 0
-    const iv = setInterval(() => {
-      p += rand(8, 20)
-      setLoadPct(Math.min(p, 100))
-      if (p >= 100) {
-        clearInterval(iv)
-        setScreen('ingame')
-        setScore({ ct:0, t:0 })
-        setRound(1)
-        setPhase('buy')
-        setTimer(15)
-        setFeed([])
-        setHp(100)
-        setArmor(100)
-        setAmmo(30)
-        setMoney(3400)
-        setWeapon(randOf(WEAPONS))
-        const fresh = buildPlayers()
-        setPlayers(fresh)
-        playersRef.current = fresh
+  // ── Game loop ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'playing') return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d', { willReadFrequently: false })
+
+    // ── Input ────────────────────────────────────────────────────────────
+    const onKey   = (e) => { stateRef.current.keys[e.code] = e.type === 'keydown' }
+    const onMove  = (e) => {
+      if (document.pointerLockElement !== canvas) return
+      stateRef.current.player.angle += e.movementX * ROT_SPEED
+    }
+    const onLock  = () => setLocked(document.pointerLockElement === canvas)
+    const onClick = () => {
+      if (document.pointerLockElement !== canvas) {
+        canvas.requestPointerLock()
+        return
       }
-    }, 120)
-  }, [])
+      shoot()
+    }
 
-  // ── Game tick ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (screen !== 'ingame') return
-    tickRef.current = setInterval(() => {
-      setTimer((t) => {
-        if (t <= 1) {
-          // Phase transition
-          setPhase((ph) => {
-            if (ph === 'buy') {
-              setTimer(105)
-              return 'playing'
-            }
-            if (ph === 'playing' || ph === 'bomb') {
-              // Round ends: CT win (time) or random
-              const ctWins = Math.random() > 0.45
-              setScore((s) => ctWins ? { ...s, ct: s.ct+1 } : { ...s, t: s.t+1 })
-              setRound((r) => r + 1)
-              addFeed(ctWins ? '💙 CT remporte la manche' : '🧡 T remporte la manche')
-              // Reset players
-              setPlayers((prev) => prev.map((p) => ({ ...p, alive:true, x: p.team==='ct' ? rand(15,45) : rand(92,128), y: p.team==='ct' ? rand(15,45) : rand(82,115) })))
-              setHp(100); setArmor(100); setAmmo(rand(15,30)); setMoney((m) => Math.min(m + 2400, 16000))
-              setTimer(15)
-              return 'buy'
-            }
-            setTimer(115)
-            return 'playing'
-          })
-          return t
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('keyup',   onKey)
+    window.addEventListener('mousemove', onMove)
+    document.addEventListener('pointerlockchange', onLock)
+    canvas.addEventListener('click', onClick)
+
+    // ── Shoot ────────────────────────────────────────────────────────────
+    function shoot() {
+      const { player, enemies } = stateRef.current
+      if (player.hp <= 0 || player.reloading > 0) return
+      if (player.ammo <= 0) { player.reloading = 60; return }
+      player.ammo--
+      stateRef.current.flash = 8
+
+      // Hit detection: cast ray, compare with enemies
+      const { dist: wallDist } = castRay(player.x, player.y, player.angle)
+      let bestEn = null, bestDist = Infinity
+
+      for (const en of enemies) {
+        if (!en.alive) continue
+        const dx = en.x - player.x, dy = en.y - player.y
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        const toEn = Math.atan2(dy, dx)
+        let diff = ((toEn - player.angle) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI
+        if (Math.abs(diff) < 0.12 && dist < wallDist && dist < bestDist) {
+          bestDist = dist; bestEn = en
         }
-        return t - 1
-      })
-    }, 1000)
-    return () => clearInterval(tickRef.current)
-  }, [screen, addFeed])
+      }
+      if (bestEn) {
+        bestEn.hp -= 34 + (Math.random() * 15 | 0)
+        bestEn.stagger = 12
+        if (bestEn.hp <= 0) { bestEn.alive = false; player.kills++ }
+      }
+      setAmmoUI(player.ammo)
+      setKillsUI(player.kills)
+    }
 
-  // ── Random events ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (screen !== 'ingame') return
-    eventRef.current = setInterval(() => {
-      setPhase((ph) => {
-        if (ph !== 'playing' && ph !== 'bomb') return ph
+    // ── Update ────────────────────────────────────────────────────────────
+    function update() {
+      const s = stateRef.current
+      const { player, enemies, keys } = s
+      if (player.hp <= 0) return
 
-        const aliveCT = playersRef.current.filter((p) => p.team==='ct' && p.alive)
-        const aliveT  = playersRef.current.filter((p) => p.team==='t'  && p.alive)
-        if (!aliveCT.length || !aliveT.length) return ph
+      const angle  = player.angle
+      const cosA   = Math.cos(angle), sinA = Math.sin(angle)
+      const cosR   = Math.cos(angle + Math.PI/2), sinR = Math.sin(angle + Math.PI/2)
 
-        // Random kill
-        const killT = Math.random() > 0.5
-        const killer = killT ? randOf(aliveCT) : randOf(aliveT)
-        const victim = killT ? randOf(aliveT)  : randOf(aliveCT)
-        const wep    = randOf(WEAPONS)
-        const hs     = Math.random() > 0.6 ? ' 🎯' : ''
+      const move = (dx, dy) => {
+        const nx = player.x + dx, ny = player.y + dy
+        if (!solid(nx, player.y)) player.x = nx
+        if (!solid(player.x, ny)) player.y = ny
+      }
 
-        setPlayers((prev) => prev.map((p) => {
-          if (p.id === victim.id) return { ...p, alive:false, deaths: p.deaths+1 }
-          if (p.id === killer.id) return { ...p, kills: p.kills+1 }
-          return p
-        }))
-        playersRef.current = playersRef.current.map((p) => {
-          if (p.id === victim.id) return { ...p, alive:false }
-          return p
-        })
+      if (keys['KeyW'] || keys['ArrowUp'])    move( cosA * MOVE_SPEED,  sinA * MOVE_SPEED)
+      if (keys['KeyS'] || keys['ArrowDown'])  move(-cosA * MOVE_SPEED, -sinA * MOVE_SPEED)
+      if (keys['KeyA'])                        move( cosR * MOVE_SPEED,  sinR * MOVE_SPEED)
+      if (keys['KeyD'])                        move(-cosR * MOVE_SPEED, -sinR * MOVE_SPEED)
+      if (keys['ArrowLeft'])  player.angle -= ROT_SPEED * 40
+      if (keys['ArrowRight']) player.angle += ROT_SPEED * 40
+      if ((keys['KeyR'] || keys['KeyF']) && !player.reloading) { player.reloading = 80 }
 
-        addFeed(`${killer.name} [${wep}]${KILL_MSGS[rand(0,1)]}${victim.name}${hs}`)
+      if (player.reloading > 0) {
+        player.reloading--
+        if (player.reloading === 0) { player.ammo = 30; setAmmoUI(30) }
+      }
 
-        // Player move
-        setPlayers((prev) => prev.map((p) => {
-          if (!p.alive) return p
-          return { ...p, x: Math.max(10, Math.min(130, p.x + rand(-12, 12))), y: Math.max(10, Math.min(120, p.y + rand(-10, 10))) }
-        }))
+      // Spacebar shoots
+      if (keys['Space']) { keys['Space'] = false; shoot() }
 
-        // Ammo drain
-        setAmmo((a) => Math.max(0, a - rand(3, 8)))
+      if (s.flash > 0) s.flash--
+      if (s.hit   > 0) s.hit--
 
-        // Bomb plant?
-        if (ph === 'playing' && Math.random() > 0.88) {
-          addFeed('💣 Bombe plantée !')
-          return 'bomb'
+      // Enemy AI
+      for (const en of enemies) {
+        if (!en.alive) continue
+        if (en.stagger > 0) { en.stagger--; continue }
+        const dx = player.x - en.x, dy = player.y - en.y
+        const dist = Math.sqrt(dx*dx + dy*dy)
+        if (dist > 0.8 && dist < 18) {
+          const spd = dist < 4 ? 0.012 : 0.007
+          const nx = en.x + (dx/dist) * spd, ny = en.y + (dy/dist) * spd
+          if (!solid(nx, en.y)) en.x = nx
+          if (!solid(en.x, ny)) en.y = ny
         }
-        return ph
+        if (dist < 1.2 && Math.random() < 0.015) {
+          player.hp = Math.max(0, player.hp - 8)
+          s.hit = 12
+          setHpUI(player.hp)
+        }
+      }
+    }
+
+    // ── Render walls ──────────────────────────────────────────────────────
+    function renderWalls(ctx, zbuf) {
+      const { player } = stateRef.current
+      // Ceiling gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, H/2)
+      grad.addColorStop(0, '#111')
+      grad.addColorStop(1, '#222')
+      ctx.fillStyle = grad
+      ctx.fillRect(0, 0, W, H/2)
+      // Floor
+      const grad2 = ctx.createLinearGradient(0, H/2, 0, H)
+      grad2.addColorStop(0, '#1a1410')
+      grad2.addColorStop(1, '#0a0807')
+      ctx.fillStyle = grad2
+      ctx.fillRect(0, H/2, W, H/2)
+
+      for (let col = 0; col < W; col++) {
+        const rayA = player.angle - FOV/2 + (col / W) * FOV
+        const { dist, wall, side } = castRay(player.x, player.y, rayA)
+        const corr  = dist * Math.cos(rayA - player.angle)
+        zbuf[col]   = corr
+        const wallH = Math.min(H * 2, (H / corr) | 0)
+        const top   = ((H - wallH) / 2) | 0
+
+        // Wall colors: concrete (1) or crate (2)
+        let r, g, b
+        if (wall === 2) { r=180; g=140; b=80 }   // yellow crate
+        else            { r=160; g=155; b=140 }   // concrete
+
+        const shade = Math.min(1, 1.5 / corr) * (side === 1 ? 0.7 : 1)
+        ctx.fillStyle = `rgb(${r*shade|0},${g*shade|0},${b*shade|0})`
+        ctx.fillRect(col, top, 1, wallH)
+      }
+    }
+
+    // ── Render enemies ────────────────────────────────────────────────────
+    function renderEnemies(ctx, zbuf) {
+      const { player, enemies } = stateRef.current
+      // Sort by distance (farthest first)
+      const sorted = [...enemies].filter(e => e.alive).sort((a, b) => {
+        const da = (a.x-player.x)**2 + (a.y-player.y)**2
+        const db = (b.x-player.x)**2 + (b.y-player.y)**2
+        return db - da
       })
-    }, rand(2500, 4500))
-    return () => clearInterval(eventRef.current)
-  }, [screen, addFeed])
 
-  // ── Screens ───────────────────────────────────────────────────────────────
+      for (const en of sorted) {
+        const dx = en.x - player.x, dy = en.y - player.y
+        const cosA = Math.cos(-player.angle), sinA = Math.sin(-player.angle)
+        const tx = dx*cosA - dy*sinA
+        const ty = dx*sinA + dy*cosA   // depth
 
-  if (screen === 'menu') {
+        if (ty < 0.3) continue
+
+        const sprH = Math.min(H * 2, ((H / ty) * 0.85) | 0)
+        const sprW = sprH * 0.6
+        const sx   = ((W/2) * (1 + tx/ty)) | 0
+        const sTop = ((H - sprH) / 2) | 0
+        const sL   = sx - (sprW/2) | 0
+
+        const shade = Math.min(1, 1.5 / ty)
+        const hurt  = en.stagger > 0
+
+        for (let c = Math.max(0, sL); c < Math.min(W, sL + sprW); c++) {
+          if (ty >= zbuf[c]) continue
+          const u = (c - sL) / sprW   // 0..1 horizontal texture coord
+
+          // Simple "soldier" silhouette from texture UV
+          let alpha = 1
+          // Rounded head top
+          if (u > 0.2 && u < 0.8 && sTop >= 0) {
+            const headH = (sprH * 0.25) | 0
+            ctx.fillStyle = hurt
+              ? `rgba(255,120,50,${shade})`
+              : `rgba(220,185,140,${shade})`
+            ctx.fillRect(c, sTop, 1, headH)
+          }
+          // Body
+          const bodyTop  = sTop + ((sprH * 0.25)|0)
+          const bodyH    = (sprH * 0.55) | 0
+          ctx.fillStyle = hurt
+            ? `rgba(255,80,40,${shade})`
+            : `rgba(60,80,60,${shade})`
+          ctx.fillRect(c, bodyTop, 1, bodyH)
+
+          // HP bar
+          if (ty < 6) {
+            const barW = sprW, barY = sTop - 5
+            if (barY >= 0 && c === sL) {
+              ctx.fillStyle = '#ff4444'
+              ctx.fillRect(sL, barY, barW, 3)
+              ctx.fillStyle = '#44ff44'
+              ctx.fillRect(sL, barY, (barW * en.hp/100)|0, 3)
+            }
+          }
+        }
+      }
+    }
+
+    // ── HUD ───────────────────────────────────────────────────────────────
+    function renderHUD(ctx) {
+      const { player, flash, hit, enemies } = stateRef.current
+      const alive = enemies.filter(e => e.alive).length
+
+      // Hit vignette
+      if (hit > 0) {
+        const g = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.8)
+        g.addColorStop(0, 'rgba(200,0,0,0)')
+        g.addColorStop(1, `rgba(200,0,0,${(hit/12)*0.6})`)
+        ctx.fillStyle = g
+        ctx.fillRect(0, 0, W, H)
+      }
+
+      // Muzzle flash
+      if (flash > 0) {
+        ctx.fillStyle = `rgba(255,200,80,${flash/8 * 0.3})`
+        ctx.fillRect(0, 0, W, H)
+      }
+
+      // Crosshair
+      const cx = W/2, cy = H/2
+      const gap = 5, len = 10
+      ctx.strokeStyle = player.hp > 0 ? 'rgba(0,255,0,0.9)' : 'rgba(255,0,0,0.9)'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.moveTo(cx-gap-len, cy); ctx.lineTo(cx-gap, cy)
+      ctx.moveTo(cx+gap,     cy); ctx.lineTo(cx+gap+len, cy)
+      ctx.moveTo(cx, cy-gap-len); ctx.lineTo(cx, cy-gap)
+      ctx.moveTo(cx, cy+gap);     ctx.lineTo(cx, cy+gap+len)
+      ctx.stroke()
+      // Center dot
+      ctx.fillStyle = 'rgba(0,255,0,0.9)'
+      ctx.beginPath(); ctx.arc(cx, cy, 1.5, 0, Math.PI*2); ctx.fill()
+
+      // Gun sprite (bottom center)
+      if (player.hp > 0) {
+        const gy = H - 40 + (flash > 0 ? -4 : 0)
+        ctx.fillStyle = '#555'
+        ctx.fillRect(W/2 + 10, gy + 15, 80, 10)  // barrel
+        ctx.fillRect(W/2 + 50, gy +  5, 40, 20)  // body
+        ctx.fillRect(W/2 + 60, gy + 25, 15, 20)  // grip
+        ctx.fillStyle = '#444'
+        ctx.fillRect(W/2 + 30, gy + 13, 40, 14)  // slide detail
+        if (flash > 0) {
+          ctx.fillStyle = `rgba(255,200,50,${flash/8})`
+          ctx.beginPath(); ctx.arc(W/2+12, gy+19, 8, 0, Math.PI*2); ctx.fill()
+        }
+      }
+
+      // HP bar
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'
+      ctx.fillRect(8, H-26, 100, 12)
+      ctx.fillStyle = player.hp > 50 ? '#44ff44' : player.hp > 25 ? '#ffcc00' : '#ff4444'
+      ctx.fillRect(8, H-26, player.hp, 12)
+      ctx.fillStyle = '#fff'
+      ctx.font = '10px "Courier New"'
+      ctx.fillText(`❤ ${player.hp}`, 10, H-17)
+
+      // Ammo
+      const ammoStr = player.reloading > 0
+        ? 'RECHARGEMENT...'
+        : `${player.ammo} / 30`
+      ctx.textAlign = 'right'
+      ctx.fillStyle = player.ammo > 5 ? '#ffcc00' : '#ff4444'
+      ctx.font = 'bold 12px "Courier New"'
+      ctx.fillText(ammoStr, W-8, H-10)
+      ctx.textAlign = 'left'
+
+      // Kills
+      ctx.fillStyle = '#fff'
+      ctx.font = '10px "Courier New"'
+      ctx.fillText(`🎯 ${player.kills} kills`, 8, 14)
+      ctx.fillStyle = '#aaa'
+      ctx.fillText(`${alive} ennemis restants`, 8, 26)
+
+      // Controls hint (bottom left, small)
+      if (!locked) {
+        ctx.fillStyle = 'rgba(255,255,255,0.6)'
+        ctx.font = '9px "Courier New"'
+        ctx.fillText('Cliquer pour capturer la souris', 8, H-30)
+      }
+    }
+
+    // ── Minimap ────────────────────────────────────────────────────────────
+    function renderMinimap(ctx) {
+      const { player, enemies } = stateRef.current
+      const S = 4, ox = W - COLS*S - 4, oy = 4
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'
+      ctx.fillRect(ox-1, oy-1, COLS*S+2, ROWS*S+2)
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (MAP[r][c]) {
+            ctx.fillStyle = MAP[r][c] === 2 ? '#886' : '#555'
+            ctx.fillRect(ox + c*S, oy + r*S, S, S)
+          }
+        }
+      }
+      // Enemies on minimap
+      for (const en of enemies) {
+        if (!en.alive) continue
+        ctx.fillStyle = '#f44'
+        ctx.fillRect(ox + en.x*S - 1, oy + en.y*S - 1, 3, 3)
+      }
+      // Player
+      ctx.fillStyle = '#4af'
+      ctx.fillRect(ox + player.x*S - 2, oy + player.y*S - 2, 4, 4)
+      // FOV lines
+      ctx.strokeStyle = 'rgba(100,180,255,0.4)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(ox + player.x*S, oy + player.y*S)
+      ctx.lineTo(ox + (player.x + Math.cos(player.angle-FOV/2)*4)*S,
+                 oy + (player.y + Math.sin(player.angle-FOV/2)*4)*S)
+      ctx.moveTo(ox + player.x*S, oy + player.y*S)
+      ctx.lineTo(ox + (player.x + Math.cos(player.angle+FOV/2)*4)*S,
+                 oy + (player.y + Math.sin(player.angle+FOV/2)*4)*S)
+      ctx.stroke()
+    }
+
+    // ── Main loop ─────────────────────────────────────────────────────────
+    const zbuf = new Float32Array(W)
+    function loop() {
+      const s = stateRef.current
+      update()
+
+      renderWalls(ctx, zbuf)
+      renderEnemies(ctx, zbuf)
+      renderHUD(ctx)
+      renderMinimap(ctx)
+
+      // Win / Dead check
+      if (s.player.hp <= 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'
+        ctx.fillRect(0, 0, W, H)
+        ctx.fillStyle = '#ff4444'
+        ctx.font = 'bold 28px "Courier New"'
+        ctx.textAlign = 'center'
+        ctx.fillText('VOUS ÊTES MORT', W/2, H/2)
+        ctx.fillStyle = '#ccc'
+        ctx.font = '13px "Courier New"'
+        ctx.fillText('Appuyez R pour rejouer', W/2, H/2 + 26)
+        ctx.textAlign = 'left'
+        setPhase('dead')
+        if (document.pointerLockElement === canvas) document.exitPointerLock()
+        return
+      }
+      if (s.enemies.every(e => !e.alive)) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'
+        ctx.fillRect(0, 0, W, H)
+        ctx.fillStyle = '#44ff44'
+        ctx.font = 'bold 24px "Courier New"'
+        ctx.textAlign = 'center'
+        ctx.fillText('VICTOIRE !', W/2, H/2)
+        ctx.fillStyle = '#fff'
+        ctx.font = '12px "Courier New"'
+        ctx.fillText(`${s.player.kills} kills — Appuyez R pour rejouer`, W/2, H/2 + 26)
+        ctx.textAlign = 'left'
+        setPhase('win')
+        if (document.pointerLockElement === canvas) document.exitPointerLock()
+        return
+      }
+
+      // Restart
+      if ((s.keys['KeyR'] || s.keys['Enter']) && (phase === 'dead' || phase === 'win')) {
+        startGame()
+        return
+      }
+
+      rafRef.current = requestAnimationFrame(loop)
+    }
+    rafRef.current = requestAnimationFrame(loop)
+
+    return () => {
+      cancelAnimationFrame(rafRef.current)
+      window.removeEventListener('keydown',         onKey)
+      window.removeEventListener('keyup',           onKey)
+      window.removeEventListener('mousemove',       onMove)
+      document.removeEventListener('pointerlockchange', onLock)
+      canvas.removeEventListener('click',           onClick)
+      if (document.pointerLockElement === canvas) document.exitPointerLock()
+    }
+  }, [phase, startGame]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Menu ────────────────────────────────────────────────────────────────
+  if (phase === 'menu') {
     return (
-      <div style={{ background:'#0d0d0d', height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'"Courier New", monospace', userSelect:'none' }}>
-        <div style={{ textAlign:'center', marginBottom:32 }}>
-          <div style={{ fontSize:28, fontWeight:'bold', color:'#e8a100', letterSpacing:4, textShadow:'0 0 20px #e8a10066' }}>
-            CS:GO
-          </div>
-          <div style={{ fontSize:11, color:'#888', letterSpacing:6, marginTop:2 }}>LEGACY EDITION</div>
-          <div style={{ width:160, height:1, background:'linear-gradient(90deg,transparent,#e8a100,transparent)', margin:'12px auto' }}/>
-          <div style={{ fontSize:9, color:'#555', letterSpacing:2 }}>Counter-Strike: Global Offensive</div>
+      <div style={{ background:'#0a0a0a', height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'"Courier New",monospace', userSelect:'none' }}>
+        <div style={{ color:'#e8a100', fontSize:32, fontWeight:'bold', letterSpacing:4, textShadow:'0 0 30px #e8a10080' }}>CS:GO</div>
+        <div style={{ color:'#666',    fontSize:11, letterSpacing:6, marginTop:2 }}>LEGACY FPS</div>
+        <div style={{ width:200, height:1, background:'linear-gradient(90deg,transparent,#e8a100,transparent)', margin:'18px 0' }}/>
+
+        <div style={{ color:'#aaa', fontSize:10, marginBottom:20, textAlign:'center', lineHeight:2 }}>
+          <span style={{ color:'#e8a100' }}>WASD</span> déplacer &nbsp;|&nbsp;
+          <span style={{ color:'#e8a100' }}>Souris</span> viser &nbsp;|&nbsp;
+          <span style={{ color:'#e8a100' }}>Clic</span> tirer<br/>
+          <span style={{ color:'#e8a100' }}>R</span> recharger &nbsp;|&nbsp;
+          <span style={{ color:'#e8a100' }}>Espace</span> tirer
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', gap:8, width:200, alignItems:'stretch' }}>
-          {[
-            { label:'▶  JOUER',     action: () => { setMap(randOf(MAPS)); startLoading() } },
-            { label:'🗺  Carte',     action: () => setMap(randOf(MAPS))                     },
-          ].map(({ label, action }) => (
-            <button
-              key={label}
-              onClick={action}
-              style={{
-                background:'transparent', border:'1px solid #e8a100', color:'#e8a100',
-                fontFamily:'"Courier New", monospace', fontSize:12, padding:'8px 16px',
-                cursor:'pointer', letterSpacing:2, transition:'all 0.1s',
-              }}
-              onMouseEnter={(e) => { e.target.style.background='#e8a100'; e.target.style.color='#000' }}
-              onMouseLeave={(e) => { e.target.style.background='transparent'; e.target.style.color='#e8a100' }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ marginTop:24, fontSize:9, color:'#333', fontFamily:'monospace' }}>
-          Carte actuelle : <span style={{ color:'#888' }}>{map}</span>
-        </div>
-        <div style={{ marginTop:8, fontSize:8, color:'#222' }}>
-          Simulation visuelle — pas de réseau requis
-        </div>
+        <button
+          onClick={startGame}
+          style={{ background:'transparent', border:'2px solid #e8a100', color:'#e8a100', fontFamily:'"Courier New",monospace', fontSize:14, padding:'10px 32px', cursor:'pointer', letterSpacing:3 }}
+          onMouseEnter={(e)=>{ e.target.style.background='#e8a100'; e.target.style.color='#000' }}
+          onMouseLeave={(e)=>{ e.target.style.background='transparent'; e.target.style.color='#e8a100' }}
+        >
+          ▶ JOUER
+        </button>
+        <div style={{ marginTop:24, color:'#333', fontSize:9 }}>7 ennemis · de_dust2 (simplifié)</div>
       </div>
     )
   }
 
-  if (screen === 'loading') {
-    return (
-      <div style={{ background:'#0d0d0d', height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'"Courier New", monospace' }}>
-        <div style={{ color:'#e8a100', fontSize:14, marginBottom:16, letterSpacing:2 }}>CONNEXION EN COURS…</div>
-        <div style={{ color:'#888',    fontSize:10, marginBottom:24 }}>{map.toUpperCase()}</div>
-        <div style={{ width:280, height:6, background:'#222', border:'1px solid #444' }}>
-          <div style={{ width:`${loadPct}%`, height:'100%', background:'#e8a100', transition:'width 0.1s' }} />
-        </div>
-        <div style={{ color:'#555', fontSize:9, marginTop:8 }}>{loadPct}%</div>
-      </div>
-    )
-  }
-
-  // In-game
-  const mmss = `${String((timer/60)|0).padStart(2,'0')}:${String(timer%60).padStart(2,'0')}`
-  const ctAlive = players.filter((p) => p.team==='ct' && p.alive).length
-  const tAlive  = players.filter((p) => p.team==='t'  && p.alive).length
-  const phaseLabel = { buy:'ACHAT', playing:'EN JEU', bomb:'💣 BOMBE', end:'FIN' }[phase] ?? ''
-
+  // ── End screens (handled in canvas render) ─────────────────────────────
   return (
-    <div style={{ background:'#111', height:'100%', display:'flex', flexDirection:'column', fontFamily:'"Courier New", monospace', fontSize:10, color:'#ccc', overflow:'hidden' }}>
-
-      {/* ── Top HUD ── */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#1a1a1a', padding:'3px 10px', borderBottom:'1px solid #333' }}>
-        <div style={{ color:'#7cb8ff', fontSize:10 }}>💙 CT {score.ct} — {ctAlive}/5 vivants</div>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ color: phase==='bomb' ? '#ff4400' : '#e8a100', fontWeight:'bold', fontSize:13, letterSpacing:1 }}>{mmss}</div>
-          <div style={{ fontSize:8, color:'#555', letterSpacing:1 }}>{phaseLabel} · Manche {round}/30 · {map}</div>
-        </div>
-        <div style={{ color:'#ffaa55', fontSize:10 }}>🧡 T {score.t} — {tAlive}/5 vivants</div>
-      </div>
-
-      {/* ── Main area ── */}
-      <div style={{ flex:1, display:'flex', gap:0, overflow:'hidden' }}>
-
-        {/* Scoreboard */}
-        <div style={{ width:260, flexShrink:0, display:'flex', flexDirection:'column', borderRight:'1px solid #333', background:'#0e0e0e' }}>
-          {/* Header */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 28px 28px 28px 36px', gap:2, padding:'2px 4px', borderBottom:'1px solid #333', color:'#555' }}>
-            <span style={{ fontSize:9 }}>Joueur</span>
-            <span style={{ textAlign:'center', fontSize:9 }}>K</span>
-            <span style={{ textAlign:'center', fontSize:9 }}>D</span>
-            <span style={{ textAlign:'center', fontSize:9 }}>A</span>
-            <span style={{ textAlign:'right',  fontSize:9 }}>ADR</span>
-          </div>
-          {/* CT */}
-          <div style={{ padding:'2px 0', borderBottom:'1px solid #222' }}>
-            <div style={{ padding:'1px 4px', fontSize:9, color:'#4488ff', letterSpacing:1 }}>— COUNTER-TERRORISTS —</div>
-            {players.filter((p) => p.team==='ct').map((p) => (
-              <PlayerRow key={p.id} {...p} />
-            ))}
-          </div>
-          {/* T */}
-          <div style={{ padding:'2px 0' }}>
-            <div style={{ padding:'1px 4px', fontSize:9, color:'#ff8844', letterSpacing:1 }}>— TERRORISTS —</div>
-            {players.filter((p) => p.team==='t').map((p) => (
-              <PlayerRow key={p.id} {...p} />
-            ))}
-          </div>
-        </div>
-
-        {/* Right: minimap + killfeed + player HUD */}
-        <div style={{ flex:1, display:'flex', flexDirection:'column', padding:6, gap:6, overflow:'hidden' }}>
-
-          {/* Minimap + killfeed row */}
-          <div style={{ display:'flex', gap:8 }}>
-            <div>
-              <div style={{ fontSize:8, color:'#555', marginBottom:2, letterSpacing:1 }}>{map.toUpperCase()}</div>
-              <Minimap players={players} phase={phase} />
-            </div>
-            {/* Kill feed */}
-            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:2, overflow:'hidden' }}>
-              <div style={{ fontSize:8, color:'#555', letterSpacing:1, marginBottom:2 }}>ÉVÉNEMENTS</div>
-              {feed.map((entry) => (
-                <div key={entry.id} style={{ fontSize:9, color:'#ccc', background:'rgba(0,0,0,0.4)', padding:'1px 4px', borderLeft:'2px solid #e8a100', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-                  {entry.msg}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Player HUD */}
-          <div style={{ background:'#0d0d0d', border:'1px solid #333', padding:'4px 8px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            {/* Health */}
-            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ fontSize:18, color: hp > 50 ? '#44ff44' : hp > 25 ? '#ffaa00' : '#ff4444' }}>❤️</span>
-              <div>
-                <div style={{ fontSize:16, fontWeight:'bold', color: hp>50?'#44ff44':hp>25?'#ffaa00':'#ff4444' }}>{hp}</div>
-                <div style={{ width:60, height:4, background:'#333' }}>
-                  <div style={{ width:`${hp}%`, height:'100%', background: hp>50?'#44ff44':hp>25?'#ffaa00':'#ff4444' }}/>
-                </div>
-              </div>
-            </div>
-            {/* Armor */}
-            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ fontSize:14 }}>🛡️</span>
-              <div style={{ fontSize:14, color:'#88aaff' }}>{armor}</div>
-            </div>
-            {/* Weapon + Ammo */}
-            <div style={{ textAlign:'right' }}>
-              <div style={{ color:'#e8a100', fontSize:11, letterSpacing:1 }}>{weapon}</div>
-              <div style={{ color:'#ccc', fontSize:14, fontWeight:'bold' }}>{ammo} / <span style={{ color:'#666' }}>90</span></div>
-            </div>
-            {/* Money */}
-            <div style={{ color:'#44cc44', fontSize:13, fontWeight:'bold' }}>$ {money.toLocaleString()}</div>
-          </div>
-
-          {/* Buy phase UI */}
-          {phase === 'buy' && (
-            <div style={{ background:'#0d0d0d', border:'1px solid #e8a10033', padding:6 }}>
-              <div style={{ fontSize:9, color:'#e8a100', marginBottom:4, letterSpacing:1 }}>PHASE D'ACHAT</div>
-              <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
-                {[['AK-47',2700],['AWP',4750],['M4A1-S',3100],['Kevlar+Casque',1000],['Flashbang',200]].map(([name, cost]) => (
-                  <button
-                    key={name}
-                    disabled={money < cost}
-                    onClick={() => { setMoney((m) => m-cost); if(name!=='Kevlar+Casque'&&name!=='Flashbang') setWeapon(name); if(name==='Kevlar+Casque') { setArmor(100) } }}
-                    style={{
-                      background:'transparent', border:`1px solid ${money>=cost?'#e8a100':'#333'}`,
-                      color: money>=cost ? '#e8a100' : '#444',
-                      fontFamily:'"Courier New", monospace', fontSize:8,
-                      padding:'2px 6px', cursor: money>=cost ? 'pointer' : 'default',
-                    }}
-                  >
-                    {name} <span style={{ color:'#44cc44' }}>${cost}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Return to menu */}
-          <button
-            onClick={() => { stopAllTimers(); setScreen('menu') }}
-            style={{ background:'transparent', border:'1px solid #333', color:'#555', fontFamily:'"Courier New", monospace', fontSize:9, padding:'3px 8px', cursor:'pointer', alignSelf:'flex-start' }}
-          >
-            ← Menu
-          </button>
-        </div>
-      </div>
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', background:'#000', alignItems:'center', justifyContent:'center' }}>
+      <canvas
+        ref={canvasRef}
+        width={W}
+        height={H}
+        style={{ display:'block', imageRendering:'pixelated', cursor:'none', width:'100%', height:'100%', objectFit:'contain' }}
+      />
+      {(phase === 'dead' || phase === 'win') && (
+        <button
+          onClick={startGame}
+          style={{ position:'absolute', bottom:12, background:'rgba(0,0,0,0.7)', border:'1px solid #e8a100', color:'#e8a100', fontFamily:'"Courier New",monospace', fontSize:11, padding:'6px 20px', cursor:'pointer' }}
+        >
+          Rejouer
+        </button>
+      )}
     </div>
   )
-
-  function stopAllTimers() {
-    clearInterval(tickRef.current)
-    clearInterval(eventRef.current)
-  }
 }

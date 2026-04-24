@@ -15,13 +15,14 @@ import { win95sounds } from '../../utils/win95sounds'
 /* ── Éléments du menu Démarrer ─────────────────────────────────── */
 
 const START_ITEMS = [
-  { label: 'Portfolio', icon: '🖥️', id: 'showcase' },
+  { label: 'Portfolio',    icon: '🖥️', id: 'showcase'  },
+  { label: 'Explorateur',  icon: '📁', id: 'explorer'  },
   { divider: true },
-  { label: 'Exécuter…', icon: '🏃', id: 'run' },
+  { label: 'Exécuter…',   icon: '🏃', id: 'run'       },
   { divider: true },
-  { label: 'Aide',      icon: '❓', id: null, disabled: true },
+  { label: 'Aide',         icon: '❓', id: null, disabled: true },
   { divider: true },
-  { label: 'Arrêter…', icon: '🔌', id: 'shutdown' },
+  { label: 'Arrêter…',    icon: '🔌', id: 'shutdown'  },
 ]
 
 /* ── Utilitaire heure AM/PM ────────────────────────────────────── */

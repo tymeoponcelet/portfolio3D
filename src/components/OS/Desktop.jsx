@@ -62,6 +62,15 @@ const WALLPAPER_WINDOW = {
   content: <WallpaperPicker />,
 }
 
+const EXPLORER_WINDOW = {
+  appId:  'desktop-explorer',
+  title:  'Explorateur',
+  icon:   '📁',
+  width:  480,
+  height: 340,
+  content: <FileExplorer folderId={null} />,
+}
+
 export const ICONS = [
   {
     id:      'showcase',
@@ -71,17 +80,24 @@ export const ICONS = [
     window:  SHOWCASE_WINDOW,
   },
   {
+    id:      'explorer',
+    label:   'Explorateur',
+    iconSrc: icons.explorerIcon,
+    pos:     { top: 170, left: 10 },
+    window:  EXPLORER_WINDOW,
+  },
+  {
     id:      'calculator',
     label:   'Calculatrice',
     iconSrc: icons.calculatorIcon,
-    pos:     { top: 170, left: 10 },
+    pos:     { top: 250, left: 10 },
     window:  CALC_WINDOW,
   },
   {
     id:      'wallpaper',
     label:   'Affichage',
     iconSrc: icons.wallpaperIcon,
-    pos:     { top: 250, left: 10 },
+    pos:     { top: 330, left: 10 },
     window:  WALLPAPER_WINDOW,
   },
 ]

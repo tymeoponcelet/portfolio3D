@@ -6,6 +6,7 @@ import trashEmpty         from './trashEmpty.svg'
 import trashFull          from './trashFull.svg'
 import calculatorIcon     from './calculator.svg'
 import wallpaperIcon      from './wallpaper.svg'
+import explorerIcon       from './Explorer.webp'
 import showcaseIcon       from './showcaseIcon.png'
 import windowExplorerIcon from './windowExplorerIcon.png'
 import computerBig        from './computerBig.png'
@@ -24,6 +25,7 @@ export const icons = {
   trashFull,
   calculatorIcon,
   wallpaperIcon,
+  explorerIcon,
   showcaseIcon,
   windowExplorerIcon,
   computerBig,

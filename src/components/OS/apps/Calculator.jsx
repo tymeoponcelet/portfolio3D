@@ -24,7 +24,8 @@ function evaluate(tokens) {
   // Pass 2: + and −
   let result = nums[0]
   for (let j = 0; j < ops.length; j++) {
-    result = ops[j] === '+' ? result + nums[j + 1] : result - nums[j + 1]
+    if      (ops[j] === '+') result += nums[j + 1]
+    else if (ops[j] === '-') result -= nums[j + 1]
   }
   return result
 }

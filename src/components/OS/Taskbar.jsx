@@ -17,6 +17,8 @@ import { win95sounds } from '../../utils/win95sounds'
 const START_ITEMS = [
   { label: 'Portfolio', icon: '🖥️', id: 'showcase' },
   { divider: true },
+  { label: 'Exécuter…', icon: '🏃', id: 'run' },
+  { divider: true },
   { label: 'Aide',      icon: '❓', id: null, disabled: true },
   { divider: true },
   { label: 'Arrêter…', icon: '🔌', id: 'shutdown' },
@@ -36,7 +38,7 @@ function getTime() {
 /* ── Taskbar ─────────────────────────────────────────────────────── */
 
 export function Taskbar() {
-  const { windows, minimizeWindow, focusWindow, openWindow, triggerShutdown } = useOSStore()
+  const { windows, minimizeWindow, focusWindow, openWindow, triggerShutdown, openRunDialog } = useOSStore()
   const [startOpen, setStartOpen] = useState(false)
   const [time,      setTime]      = useState(getTime)
   const menuRef = useRef(null)
@@ -73,6 +75,7 @@ export function Taskbar() {
     setStartOpen(false)
     lastClickInside.current = false
     if (item.id === 'shutdown') { triggerShutdown(); return }
+    if (item.id === 'run')      { openRunDialog();  return }
     const icon = ICONS.find((i) => i.id === item.id)
     if (icon) openWindow(icon.window)
   }

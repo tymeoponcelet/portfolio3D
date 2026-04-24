@@ -101,5 +101,17 @@ export const useOSStore = create((set, get) => {
     set((s) => ({
       windows: s.windows.map((w) => (w.id === id ? { ...w, position: pos } : w)),
     })),
+
+  closeWindowByAppId: (appId) =>
+    set((s) => ({ windows: s.windows.filter((w) => w.appId !== appId) })),
+
+  // ── Wallpaper ──────────────────────────────────────────────────
+  wallpaper: { type: 'pattern', value: 'teal' },
+  setWallpaper: (wp) => set({ wallpaper: wp }),
+
+  // ── Run Dialog ─────────────────────────────────────────────────
+  runDialogOpen: false,
+  openRunDialog:  () => set({ runDialogOpen: true }),
+  closeRunDialog: () => set({ runDialogOpen: false }),
   }
 })

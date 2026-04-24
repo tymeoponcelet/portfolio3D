@@ -292,43 +292,79 @@ function FPSGame({ onExit }) {
     const zbuf = new Float32Array(W)
 
     // ── Input ────────────────────────────────────────────────────────────
-    const onKey   = (e) => { stateRef.current.keys[e.code] = e.type==='keydown' }
-    const onMove  = (e) => {
-      if (document.pointerLockElement!==canvas) return
-      stateRef.current.player.angle += e.movementX * RSENS
+    // ZQSD (AZERTY) + WASD (QWERTY) : on utilise e.key pour être layout-agnostic
+    const KEY_MAP = { z:'FWD',w:'FWD', s:'BACK', q:'LEFT',a:'LEFT', d:'RIGHT', r:'RELOAD',f:'RELOAD' }
+    const onKey = (e) => {
+      const s = stateRef.current; if (!s) return
+      const k   = e.key.toLowerCase()
+      const virt = KEY_MAP[k]
+      if (virt) { e.preventDefault(); s.keys[virt] = e.type==='keydown' }
+      else s.keys[e.code] = e.type==='keydown'
     }
-    const onLock  = () => {}
-    const onClickCanvas = () => {
-      if (document.pointerLockElement!==canvas) { canvas.requestPointerLock(); return }
-      shootFn()
+
+    // Drag-to-rotate fallback (marche sans pointer lock)
+    let prevDragX = null, isDragging = false
+    const onCanvasDown = (e) => {
+      if (e.button !== 0) return
+      isDragging = true; prevDragX = e.clientX
+      canvas.requestPointerLock?.()
+    }
+    const onCanvasUp = (e) => {
+      if (e.button !== 0) return
+      isDragging = false; prevDragX = null
+      shootFn()   // tirer au mouseup pour distinguer drag et clic
+    }
+    const onMove = (e) => {
+      const s = stateRef.current; if (!s) return
+      if (document.pointerLockElement === canvas) {
+        s.player.angle += e.movementX * RSENS
+      } else if (isDragging && prevDragX !== null) {
+        s.player.angle += (e.clientX - prevDragX) * RSENS * 0.8
+        prevDragX = e.clientX
+      }
     }
     const onContextMenu = (e) => e.preventDefault()
 
     function shootFn() {
       const s = stateRef.current; if (!s) return
       const p = s.player
-      if (p.hp<=0||p.reloading>0) return
+      if (p.hp<=0 || p.reloading>0) return
       if (p.ammo<=0) { p.reloading=80; return }
       p.ammo--; s.flash=9
       csClick()
       setAmmoUI(p.ammo)
-      const {dist:wd} = dda(p.x, p.y, p.angle)
+
       let best=null, bDist=Infinity
       for (const en of s.enemies) {
         if (!en.alive) continue
-        const dx=en.x-p.x, dy=en.y-p.y, dist=Math.sqrt(dx*dx+dy*dy)
+        const dx=en.x-p.x, dy=en.y-p.y
+        const dist=Math.sqrt(dx*dx+dy*dy)
         const toE=Math.atan2(dy,dx)
-        const diff=Math.abs(((toE-p.angle)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI)
-        if (diff<0.13&&dist<wd&&dist<bDist){bDist=dist;best=en}
+        // Normalisation fiable de la différence d'angle → [-π, π]
+        let diff = toE - p.angle
+        while (diff >  Math.PI) diff -= Math.PI*2
+        while (diff < -Math.PI) diff += Math.PI*2
+        diff = Math.abs(diff)
+        // Seuil dynamique : plus large pour les ennemis proches
+        const threshold = Math.max(0.14, Math.atan2(0.55, dist))
+        if (diff < threshold && dist < bDist) {
+          // Occlusion : rayon vers l'ennemi (pas vers la camera)
+          const { dist: wallD } = dda(p.x, p.y, toE)
+          if (dist < wallD + 0.4) { bDist=dist; best=en }
+        }
       }
-      if (best){best.hp-=30+(Math.random()*20|0);best.stagger=14;if(best.hp<=0){best.alive=false;p.kills++;setKills(p.kills)}}
+      if (best) {
+        best.hp -= 34+(Math.random()*16|0)
+        best.stagger = 16
+        if (best.hp<=0) { best.alive=false; p.kills++; setKills(p.kills) }
+      }
     }
 
-    window.addEventListener('keydown',  onKey)
-    window.addEventListener('keyup',    onKey)
-    window.addEventListener('mousemove',onMove)
-    document.addEventListener('pointerlockchange',onLock)
-    canvas.addEventListener('click',    onClickCanvas)
+    window.addEventListener('keydown',   onKey)
+    window.addEventListener('keyup',     onKey)
+    window.addEventListener('mousemove', onMove)
+    canvas.addEventListener('mousedown', onCanvasDown)
+    window.addEventListener('mouseup',   onCanvasUp)
     canvas.addEventListener('contextmenu', onContextMenu)
 
     // ── Game loop ────────────────────────────────────────────────────────
@@ -340,22 +376,23 @@ function FPSGame({ onExit }) {
       const r = canvas.getBoundingClientRect()
       if (r.width===0) return
 
-      const cosA=Math.cos(p.angle),sinA=Math.sin(p.angle)
+      const cosA=Math.cos(p.angle), sinA=Math.sin(p.angle)
+      const cosR=Math.cos(p.angle+Math.PI/2), sinR=Math.sin(p.angle+Math.PI/2)
       const move=(dx,dy)=>{
-        const nx=p.x+dx,ny=p.y+dy
+        const nx=p.x+dx, ny=p.y+dy
         if(!solid(nx,p.y))p.x=nx
         if(!solid(p.x,ny))p.y=ny
       }
-      if(keys['KeyW']||keys['ArrowUp'])    move( cosA*MOVE, sinA*MOVE)
-      if(keys['KeyS']||keys['ArrowDown'])  move(-cosA*MOVE,-sinA*MOVE)
-      const cosR=Math.cos(p.angle+Math.PI/2),sinR=Math.sin(p.angle+Math.PI/2)
-      if(keys['KeyA'])                     move( cosR*MOVE, sinR*MOVE)
-      if(keys['KeyD'])                     move(-cosR*MOVE,-sinR*MOVE)
-      if(keys['ArrowLeft'])  p.angle-=RSENS*36
-      if(keys['ArrowRight']) p.angle+=RSENS*36
+      // ZQSD (AZERTY) + WASD (QWERTY) via clés virtuelles
+      if(keys['FWD']  || keys['ArrowUp'])    move( cosA*MOVE,  sinA*MOVE)
+      if(keys['BACK'] || keys['ArrowDown'])   move(-cosA*MOVE, -sinA*MOVE)
+      if(keys['LEFT'])                        move( cosR*MOVE,  sinR*MOVE)
+      if(keys['RIGHT'])                       move(-cosR*MOVE, -sinR*MOVE)
+      if(keys['ArrowLeft'])  p.angle -= RSENS*40
+      if(keys['ArrowRight']) p.angle += RSENS*40
       if(keys['Escape'])  { keys['Escape']=false; if(document.pointerLockElement===canvas)document.exitPointerLock(); onExit(); return }
       if(keys['Space'])   { keys['Space']=false; shootFn() }
-      if(keys['KeyR']&&!p.reloading&&p.ammo<30){p.reloading=80}
+      if(keys['RELOAD'] && !p.reloading && p.ammo<30) { keys['RELOAD']=false; p.reloading=80 }
 
       if(p.reloading>0){p.reloading--;if(p.reloading===0){p.ammo=30;setAmmoUI(30);csBeep(440,0.12)}}
       if(s.flash>0)s.flash--
@@ -403,12 +440,12 @@ function FPSGame({ onExit }) {
 
     return () => {
       cancelAnimationFrame(rafRef.current)
-      window.removeEventListener('keydown',  onKey)
-      window.removeEventListener('keyup',    onKey)
-      window.removeEventListener('mousemove',onMove)
-      document.removeEventListener('pointerlockchange',onLock)
-      canvas.removeEventListener('click',    onClickCanvas)
-      canvas.removeEventListener('contextmenu',onContextMenu)
+      window.removeEventListener('keydown',   onKey)
+      window.removeEventListener('keyup',     onKey)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup',   onCanvasUp)
+      canvas.removeEventListener('mousedown', onCanvasDown)
+      canvas.removeEventListener('contextmenu', onContextMenu)
       if(document.pointerLockElement===canvas)document.exitPointerLock()
     }
   }, [onExit]) // eslint-disable-line
@@ -614,7 +651,7 @@ function LauncherScreen({ onPlay }) {
           {/* Controls reminder */}
           <div style={{ borderTop:'1px solid #2a3540', paddingTop:8, marginTop:'auto' }}>
             <div style={{ color:'#4a6070', fontSize:8, letterSpacing:1, marginBottom:4 }}>CONTRÔLES</div>
-            {[['WASD','Déplacer'],['Souris','Viser'],['Clic','Tirer'],['R','Recharger'],['ESC','Menu']].map(([k,v])=>(
+            {[['ZQSD','Déplacer'],['Glisser souris','Viser'],['Clic','Tirer'],['R / F','Recharger'],['ESC','Menu']].map(([k,v])=>(
               <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
                 <span style={{ color:'#c8a000', fontSize:8, fontWeight:'bold' }}>{k}</span>
                 <span style={{ color:'#607080', fontSize:8 }}>{v}</span>

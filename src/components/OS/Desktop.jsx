@@ -193,15 +193,27 @@ export function Desktop() {
 
   const openProperties = useCallback(() => { openWindow(PROPERTIES_WINDOW) }, [openWindow])
 
+  const findFreePos = useCallback(() => {
+    const STEP = 80, X = 10, START_Y = 170
+    for (let row = 0; row < 30; row++) {
+      const y = START_Y + row * STEP
+      const taken = desktopFsItems.some(
+        (i) => i.pos && Math.abs(i.pos.x - X) < STEP && Math.abs(i.pos.y - y) < STEP
+      )
+      if (!taken) return { x: X, y }
+    }
+    return { x: X + STEP, y: START_Y }
+  }, [desktopFsItems])
+
   const handleCreateFolder = useCallback(() => {
-    const id = createItem('folder', null, { x: 10, y: 170 + desktopFsItems.length * 72 })
+    const id = createItem('folder', null, findFreePos())
     setRenamingId(id)
-  }, [createItem, desktopFsItems.length])
+  }, [createItem, findFreePos])
 
   const handleCreateFile = useCallback(() => {
-    const id = createItem('file', null, { x: 10, y: 170 + desktopFsItems.length * 72 })
+    const id = createItem('file', null, findFreePos())
     setRenamingId(id)
-  }, [createItem, desktopFsItems.length])
+  }, [createItem, findFreePos])
 
   const handleOpenFsItem = useCallback((item) => {
     if (item.type === 'folder') {

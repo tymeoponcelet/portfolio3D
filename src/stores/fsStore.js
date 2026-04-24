@@ -116,7 +116,17 @@ export const useFsStore = create(
 
       deleteItem: (id) => {
         set((s) => {
-          const toDelete = new Set(collectDescendants(s.items, id))
+          const toDelete = new Set([id])
+          let changed = true
+          while (changed) {
+            changed = false
+            s.items.forEach((i) => {
+              if (!toDelete.has(i.id) && i.parentId && toDelete.has(i.parentId)) {
+                toDelete.add(i.id)
+                changed = true
+              }
+            })
+          }
           return { items: s.items.filter((i) => !toDelete.has(i.id)) }
         })
       },

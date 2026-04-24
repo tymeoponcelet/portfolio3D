@@ -16,6 +16,9 @@ import { RunDialog }                                from './RunDialog'
 import { wallpaperToStyle }                         from '../../utils/wallpaper'
 import { Calculator }                               from './apps/Calculator'
 import { WallpaperPicker }                          from './apps/WallpaperPicker'
+import { MsPaint }                                  from './apps/MsPaint'
+import { Minesweeper }                              from './apps/Minesweeper'
+import { CsgoLegacy }                              from './apps/CsgoLegacy'
 
 const SHOWCASE_WINDOW = {
   appId:   'showcase',
@@ -71,6 +74,33 @@ const EXPLORER_WINDOW = {
   content: <FileExplorer folderId={null} />,
 }
 
+const PAINT_WINDOW = {
+  appId:  'mspaint',
+  title:  'Paint',
+  icon:   '🎨',
+  width:  640,
+  height: 460,
+  content: <MsPaint />,
+}
+
+const MINESWEEPER_WINDOW = {
+  appId:  'minesweeper',
+  title:  'Démineur',
+  icon:   '💣',
+  width:  240,
+  height: 320,
+  content: <Minesweeper />,
+}
+
+const CSGO_WINDOW = {
+  appId:  'csgo',
+  title:  'CS:GO Legacy',
+  icon:   '🔫',
+  width:  640,
+  height: 420,
+  content: <CsgoLegacy />,
+}
+
 export const ICONS = [
   {
     id:      'showcase',
@@ -99,6 +129,27 @@ export const ICONS = [
     iconSrc: icons.wallpaperIcon,
     pos:     { top: 330, left: 10 },
     window:  WALLPAPER_WINDOW,
+  },
+  {
+    id:      'mspaint',
+    label:   'Paint',
+    iconSrc: icons.paintIcon,
+    pos:     { top: 6, left: 90 },
+    window:  PAINT_WINDOW,
+  },
+  {
+    id:      'minesweeper',
+    label:   'Démineur',
+    iconSrc: icons.minesweeperIcon,
+    pos:     { top: 90, left: 90 },
+    window:  MINESWEEPER_WINDOW,
+  },
+  {
+    id:      'csgo',
+    label:   'CS:GO Legacy',
+    iconSrc: icons.csgoIcon,
+    pos:     { top: 170, left: 90 },
+    window:  CSGO_WINDOW,
   },
 ]
 

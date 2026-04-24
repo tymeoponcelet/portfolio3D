@@ -5,6 +5,9 @@ import { Calculator }        from './apps/Calculator'
 import { WallpaperPicker }   from './apps/WallpaperPicker'
 import { ShowcaseExplorer }  from './apps/ShowcaseExplorer'
 import { FileExplorer }      from './apps/FileExplorer'
+import { MsPaint }           from './apps/MsPaint'
+import { Minesweeper }       from './apps/Minesweeper'
+import { CsgoLegacy }        from './apps/CsgoLegacy'
 
 const CALC_WINDOW = {
   appId: 'calculator', title: 'Calculatrice', icon: '🧮',
@@ -85,6 +88,16 @@ export function RunDialog() {
       return
     }
 
+    const PAINT_WINDOW = {
+      appId: 'mspaint', title: 'Paint', icon: '🎨', width: 640, height: 460, content: <MsPaint />,
+    }
+    const MINESWEEPER_WINDOW = {
+      appId: 'minesweeper', title: 'Démineur', icon: '💣', width: 240, height: 320, content: <Minesweeper />,
+    }
+    const CSGO_WINDOW = {
+      appId: 'csgo', title: 'CS:GO Legacy', icon: '🔫', width: 640, height: 420, content: <CsgoLegacy />,
+    }
+
     const OPEN_MAP = {
       'calculator':      CALC_WINDOW,
       'open calculator': CALC_WINDOW,
@@ -94,6 +107,16 @@ export function RunDialog() {
       'open explorer':   EXPLORER_WINDOW,
       'portfolio':       PORTFOLIO_WINDOW,
       'open portfolio':  PORTFOLIO_WINDOW,
+      'paint':           PAINT_WINDOW,
+      'mspaint':         PAINT_WINDOW,
+      'open paint':      PAINT_WINDOW,
+      'minesweeper':     MINESWEEPER_WINDOW,
+      'démineur':        MINESWEEPER_WINDOW,
+      'demineur':        MINESWEEPER_WINDOW,
+      'open minesweeper':MINESWEEPER_WINDOW,
+      'csgo':            CSGO_WINDOW,
+      'cs:go':           CSGO_WINDOW,
+      'open csgo':       CSGO_WINDOW,
     }
 
     if (OPEN_MAP[lower]) {

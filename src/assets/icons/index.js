@@ -17,6 +17,9 @@ import minimize           from './minimize.png'
 import maximize           from './maximize.png'
 import close              from './close.png'
 import windowResize       from './windowResize.png'
+import paintIcon         from './paint.svg'
+import minesweeperIcon   from './minesweeper.svg'
+import csgoIcon          from './csgo.svg'
 
 export const icons = {
   folder,
@@ -36,6 +39,9 @@ export const icons = {
   maximize,
   close,
   windowResize,
+  paintIcon,
+  minesweeperIcon,
+  csgoIcon,
 }
 
 /** @param {keyof typeof icons} name */

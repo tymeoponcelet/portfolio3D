@@ -8,6 +8,9 @@ import { Notepad }         from './Notepad'
 import { ShowcaseExplorer } from './ShowcaseExplorer'
 import { Calculator }       from './Calculator'
 import { WallpaperPicker }  from './WallpaperPicker'
+import { MsPaint }          from './MsPaint'
+import { Minesweeper }      from './Minesweeper'
+import { CsgoLegacy }       from './CsgoLegacy'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -235,11 +238,14 @@ export function FileExplorer({ folderId }) {
   // Virtual static shortcuts shown only in the Bureau view
   const trashFull = allItems.some((i) => i.parentId === 'trash')
   const virtualBureauItems = currentFolderId === null ? [
-    { id: '__showcase__',   type: 'virtual', name: 'Portfolio',    iconSrc: icons.showcaseIcon   },
-    { id: '__trash__',      type: 'virtual', name: 'Corbeille',    iconSrc: trashFull ? icons.trashFull : icons.trashEmpty },
-    { id: '__explorer__',   type: 'virtual', name: 'Explorateur',  iconSrc: icons.explorerIcon   },
-    { id: '__calculator__', type: 'virtual', name: 'Calculatrice', iconSrc: icons.calculatorIcon },
-    { id: '__wallpaper__',  type: 'virtual', name: 'Affichage',    iconSrc: icons.wallpaperIcon  },
+    { id: '__showcase__',    type: 'virtual', name: 'Portfolio',    iconSrc: icons.showcaseIcon    },
+    { id: '__trash__',       type: 'virtual', name: 'Corbeille',    iconSrc: trashFull ? icons.trashFull : icons.trashEmpty },
+    { id: '__explorer__',    type: 'virtual', name: 'Explorateur',  iconSrc: icons.explorerIcon    },
+    { id: '__calculator__',  type: 'virtual', name: 'Calculatrice', iconSrc: icons.calculatorIcon  },
+    { id: '__wallpaper__',   type: 'virtual', name: 'Affichage',    iconSrc: icons.wallpaperIcon   },
+    { id: '__paint__',       type: 'virtual', name: 'Paint',        iconSrc: icons.paintIcon       },
+    { id: '__minesweeper__', type: 'virtual', name: 'Démineur',     iconSrc: icons.minesweeperIcon },
+    { id: '__csgo__',        type: 'virtual', name: 'CS:GO Legacy', iconSrc: icons.csgoIcon        },
   ] : []
 
   const allDisplayItems = [...virtualBureauItems, ...displayItems]
@@ -324,6 +330,19 @@ export function FileExplorer({ folderId }) {
   const handleOpenItem = useCallback((item) => {
     if (item.type === 'folder') {
       handleNavigate(item.id)
+    } else if (item.name?.match(/\.(bmp|png|jpg|jpeg|gif)$/i) && item.content?.startsWith('data:')) {
+      openWindow({
+        appId:   `imgview-${item.id}`,
+        title:   item.name,
+        icon:    '🖼️',
+        width:   500,
+        height:  400,
+        content: (
+          <div style={{ width:'100%', height:'100%', overflow:'auto', background:'#808080', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <img src={item.content} alt={item.name} style={{ maxWidth:'100%', maxHeight:'100%', imageRendering:'pixelated' }} />
+          </div>
+        ),
+      })
     } else {
       openWindow({
         appId:   `notepad-${item.id}`,
@@ -352,6 +371,15 @@ export function FileExplorer({ folderId }) {
         break
       case '__trash__':
         openWindow({ appId: 'trash-explorer', title: 'Corbeille', icon: '🗑️', width: 480, height: 340, content: <FileExplorer folderId="trash" /> })
+        break
+      case '__paint__':
+        openWindow({ appId: 'mspaint', title: 'Paint', icon: '🎨', width: 640, height: 460, content: <MsPaint /> })
+        break
+      case '__minesweeper__':
+        openWindow({ appId: 'minesweeper', title: 'Démineur', icon: '💣', width: 240, height: 320, content: <Minesweeper /> })
+        break
+      case '__csgo__':
+        openWindow({ appId: 'csgo', title: 'CS:GO Legacy', icon: '🔫', width: 640, height: 420, content: <CsgoLegacy /> })
         break
     }
   }, [openWindow])

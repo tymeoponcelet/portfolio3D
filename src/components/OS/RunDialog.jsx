@@ -86,9 +86,13 @@ export function RunDialog() {
     }
 
     const OPEN_MAP = {
+      'calculator':      CALC_WINDOW,
       'open calculator': CALC_WINDOW,
+      'wallpaper':       WALLPAPER_WINDOW,
       'open wallpaper':  WALLPAPER_WINDOW,
+      'explorer':        EXPLORER_WINDOW,
       'open explorer':   EXPLORER_WINDOW,
+      'portfolio':       PORTFOLIO_WINDOW,
       'open portfolio':  PORTFOLIO_WINDOW,
     }
 

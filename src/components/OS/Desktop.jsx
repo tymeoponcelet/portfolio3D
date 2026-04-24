@@ -18,6 +18,7 @@ import { Calculator }                               from './apps/Calculator'
 import { WallpaperPicker }                          from './apps/WallpaperPicker'
 import { MsPaint }                                  from './apps/MsPaint'
 import { Minesweeper }                              from './apps/Minesweeper'
+import { ImageViewer }                              from './apps/ImageViewer'
 
 const SHOWCASE_WINDOW = {
   appId:   'showcase',
@@ -329,6 +330,15 @@ export function Desktop() {
         width:   480,
         height:  320,
         content: <FileExplorer folderId={item.id} folderName={item.name} />,
+      })
+    } else if (item.type === 'image' || /\.(png|bmp|jpg|jpeg|gif|webp)$/i.test(item.name ?? '')) {
+      openWindow({
+        appId:   `imgview-${item.id}`,
+        title:   item.name,
+        icon:    '🖼️',
+        width:   520,
+        height:  420,
+        content: <ImageViewer fileId={item.id} />,
       })
     } else {
       openWindow({

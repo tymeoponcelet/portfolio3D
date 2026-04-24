@@ -10,6 +10,7 @@ import { Calculator }       from './Calculator'
 import { WallpaperPicker }  from './WallpaperPicker'
 import { MsPaint }          from './MsPaint'
 import { Minesweeper }      from './Minesweeper'
+import { ImageViewer }      from './ImageViewer'
 
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -331,18 +332,14 @@ export function FileExplorer({ folderId }) {
   const handleOpenItem = useCallback((item) => {
     if (item.type === 'folder') {
       handleNavigate(item.id)
-    } else if (item.name?.match(/\.(bmp|png|jpg|jpeg|gif)$/i) && item.content?.startsWith('data:')) {
+    } else if (item.type === 'image' || /\.(png|bmp|jpg|jpeg|gif|webp)$/i.test(item.name ?? '')) {
       openWindow({
         appId:   `imgview-${item.id}`,
         title:   item.name,
         icon:    '🖼️',
-        width:   500,
-        height:  400,
-        content: (
-          <div style={{ width:'100%', height:'100%', overflow:'auto', background:'#808080', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <img src={item.content} alt={item.name} style={{ maxWidth:'100%', maxHeight:'100%', imageRendering:'pixelated' }} />
-          </div>
-        ),
+        width:   520,
+        height:  420,
+        content: <ImageViewer fileId={item.id} />,
       })
     } else {
       openWindow({

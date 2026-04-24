@@ -96,6 +96,45 @@ function FolderTreeNode({ folder, allItems, depth, currentFolderId, expandedIds,
   )
 }
 
+function BureauNode({ allItems, currentFolderId, expandedIds, onToggle, onNavigate }) {
+  const children   = allItems.filter((i) => i.type === 'folder' && i.parentId === null && !i.system)
+  const isExpanded = expandedIds.has('__bureau__')
+  const isActive   = currentFolderId === null
+
+  return (
+    <>
+      <div
+        className={`win95-tree-node${isActive ? ' active' : ''}`}
+        style={{ paddingLeft: 4 }}
+        onClick={() => onNavigate(null)}
+      >
+        <span
+          className="win95-tree-toggle"
+          onClick={children.length > 0
+            ? (e) => { e.stopPropagation(); onToggle('__bureau__') }
+            : undefined}
+        >
+          {children.length > 0 ? (isExpanded ? '▼' : '▶') : ''}
+        </span>
+        <img src={icons.folder} alt="" className="win95-tree-icon" />
+        <span style={{ marginLeft: 3 }}>Bureau</span>
+      </div>
+      {isExpanded && children.map((folder) => (
+        <FolderTreeNode
+          key={folder.id}
+          folder={folder}
+          allItems={allItems}
+          depth={1}
+          currentFolderId={currentFolderId}
+          expandedIds={expandedIds}
+          onToggle={onToggle}
+          onNavigate={onNavigate}
+        />
+      ))}
+    </>
+  )
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 
 export function FileExplorer({ folderId }) {
@@ -111,7 +150,7 @@ export function FileExplorer({ folderId }) {
   const [renamingId,      setRenamingId]      = useState(null)
   const [drag,            setDrag]            = useState(null)
   const [iconContextMenu, setIconContextMenu] = useState(null)
-  const [expandedIds,     setExpandedIds]     = useState(() => new Set())
+  const [expandedIds,     setExpandedIds]     = useState(() => new Set(['__bureau__']))
 
   const containerRef = useRef(null)
 
@@ -126,10 +165,10 @@ export function FileExplorer({ folderId }) {
   const currentItem   = allItems.find((i) => i.id === currentFolderId)
   const parentId      = currentItem?.parentId ?? null
   const canGoUp       = currentFolderId !== null && currentFolderId !== 'trash'
-  const addressPath   = buildPath(allItems, currentFolderId)
-  const rawItems      = allItems.filter((i) => i.parentId === currentFolderId && !i.system)
-  const displayItems  = sortItems(rawItems, sortKey, sortDir)
-  const rootFolders   = allItems.filter((i) => i.type === 'folder' && i.parentId === null)
+  const addressPath  = buildPath(allItems, currentFolderId)
+  const rawItems     = allItems.filter((i) => i.parentId === currentFolderId && !i.system)
+  const displayItems = sortItems(rawItems, sortKey, sortDir)
+  const trashFolder  = allItems.find((i) => i.id === 'trash')
 
   // ── Drag-and-drop ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -180,7 +219,19 @@ export function FileExplorer({ folderId }) {
     setCurrentFolderId(id)
     setSelectedId(null)
     setRenamingId(null)
-    setExpandedIds((prev) => { const next = new Set(prev); next.add(id); return next })
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      next.add('__bureau__')
+      if (id !== null) {
+        next.add(id)
+        let cur = useFsStore.getState().items.find((i) => i.id === id)
+        while (cur?.parentId && cur.parentId !== 'trash') {
+          next.add(cur.parentId)
+          cur = useFsStore.getState().items.find((i) => i.id === cur.parentId)
+        }
+      }
+      return next
+    })
   }, [])
 
   const handleGoUp = useCallback(() => {
@@ -263,10 +314,16 @@ export function FileExplorer({ folderId }) {
 
         {/* Sidebar */}
         <div className="win95-fileexplorer-sidebar">
-          {rootFolders.map((folder) => (
+          <BureauNode
+            allItems={allItems}
+            currentFolderId={currentFolderId}
+            expandedIds={expandedIds}
+            onToggle={handleToggleExpand}
+            onNavigate={handleNavigate}
+          />
+          {trashFolder && (
             <FolderTreeNode
-              key={folder.id}
-              folder={folder}
+              folder={trashFolder}
               allItems={allItems}
               depth={0}
               currentFolderId={currentFolderId}
@@ -274,7 +331,7 @@ export function FileExplorer({ folderId }) {
               onToggle={handleToggleExpand}
               onNavigate={handleNavigate}
             />
-          ))}
+          )}
         </div>
 
         {/* Main view */}

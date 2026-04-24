@@ -12,6 +12,8 @@ import { ContextMenu, SystemProperties }            from './ContextMenu'
 import { DynamicIcon }                              from './DynamicIcon'
 import { IconContextMenu }                          from './IconContextMenu'
 import { TrashContextMenu }                         from './TrashContextMenu'
+import { RunDialog }                                from './RunDialog'
+import { wallpaperToStyle }                         from '../../utils/wallpaper'
 
 const SHOWCASE_WINDOW = {
   appId:   'showcase',
@@ -92,6 +94,20 @@ function DesktopShortcut({ entry, isSelected, onSelect, onOpen, onContextMenu })
 export function Desktop() {
   const windows    = useOSStore((s) => s.windows)
   const openWindow = useOSStore((s) => s.openWindow)
+
+  const wallpaper     = useOSStore((s) => s.wallpaper)
+  const openRunDialog = useOSStore((s) => s.openRunDialog)
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.ctrlKey && e.key.toLowerCase() === 'r') {
+        e.preventDefault()
+        openRunDialog()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [openRunDialog])
 
   const fsItems    = useFsStore((s) => s.items)
   const createItem = useFsStore((s) => s.createItem)
@@ -275,6 +291,7 @@ export function Desktop() {
     <div
       ref={desktopRef}
       className="win95-desktop"
+      style={wallpaperToStyle(wallpaper)}
       onClick={handleDesktopClick}
       onContextMenu={handleContextMenu}
     >
@@ -379,6 +396,7 @@ export function Desktop() {
       )}
 
       <Taskbar />
+      <RunDialog />
     </div>
   )
 }

@@ -195,15 +195,19 @@ export function Desktop() {
 
   const findFreePos = useCallback(() => {
     const STEP = 80, X = 10, START_Y = 170
+    // Lire le store directement pour éviter la closure stale
+    const live = useFsStore.getState().items.filter(
+      (i) => i.parentId === null && !i.system && i.pos
+    )
     for (let row = 0; row < 30; row++) {
       const y = START_Y + row * STEP
-      const taken = desktopFsItems.some(
-        (i) => i.pos && Math.abs(i.pos.x - X) < STEP && Math.abs(i.pos.y - y) < STEP
+      const taken = live.some(
+        (i) => Math.abs(i.pos.x - X) < STEP && Math.abs(i.pos.y - y) < STEP
       )
       if (!taken) return { x: X, y }
     }
     return { x: X + STEP, y: START_Y }
-  }, [desktopFsItems])
+  }, [])
 
   const handleCreateFolder = useCallback(() => {
     const id = createItem('folder', null, findFreePos())

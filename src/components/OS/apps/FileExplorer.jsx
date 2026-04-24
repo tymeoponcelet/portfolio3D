@@ -115,7 +115,14 @@ export function FileExplorer({ folderId }) {
 
   const containerRef = useRef(null)
 
-  const isInTrash     = currentFolderId === 'trash'
+  const isInTrash     = (() => {
+    let id = currentFolderId
+    while (id) {
+      if (id === 'trash') return true
+      id = allItems.find((i) => i.id === id)?.parentId ?? null
+    }
+    return false
+  })()
   const currentItem   = allItems.find((i) => i.id === currentFolderId)
   const parentId      = currentItem?.parentId ?? null
   const canGoUp       = currentFolderId !== null && currentFolderId !== 'trash'

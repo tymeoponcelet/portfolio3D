@@ -1,15 +1,16 @@
 // src/hooks/useWebGLCheck.js
 import { useState } from 'react'
 
+const MIN_WIDTH = 480
+
 export function useWebGLCheck() {
   const [result] = useState(() => {
-    if (window.innerWidth < 480) {
+    if (window.innerWidth < MIN_WIDTH) {
       return { supported: false, reason: 'size' }
     }
     try {
       const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('webgl2')
-      if (!ctx) return { supported: false, reason: 'webgl' }
+      if (!canvas.getContext('webgl2')) return { supported: false, reason: 'webgl' }
     } catch {
       return { supported: false, reason: 'webgl' }
     }

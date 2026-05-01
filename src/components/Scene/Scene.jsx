@@ -8,6 +8,8 @@ import { Room } from './Room'
 import { LoadingScreen } from './LoadingScreen'
 import { useWindowStore } from '../../stores/windowStore'
 import { useNightAudio } from '../../hooks/useNightAudio'
+import { useDevicePixelRatio } from '../../hooks/useDevicePixelRatio'
+import { AdaptiveRenderer } from './AdaptiveRenderer'
 
 // ── Positions caméra ──────────────────────────────────────────────
 const CAMERA = {
@@ -258,6 +260,7 @@ export function Scene() {
   }, [isFocused, zoomOut])
 
   const { play: playAudio } = useNightAudio()
+  const dpr = useDevicePixelRatio()
 
   // ── handleCreated : initialise CameraControls à la position d'intro ─
   const handleCreated = useCallback(({ gl }) => {
@@ -285,7 +288,11 @@ export function Scene() {
   }, [])
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+    <div
+      style={{ width: '100vw', height: '100vh', position: 'relative' }}
+      role="application"
+      aria-label="Portfolio 3D Poncelet Tymeo — scene Windows 95"
+    >
 
       <LoadingScreen onStart={handleStart} />
 
@@ -293,6 +300,7 @@ export function Scene() {
         camera={{ position: [0, 1.1, 4.2], fov: 50 }}
         shadows
         gl={{ antialias: true, alpha: true }}
+        dpr={dpr}
         onCreated={handleCreated}
       >
         {/* Ambiance nocturne — très sombre */}
@@ -303,7 +311,9 @@ export function Scene() {
         <pointLight position={[-0.03, 0.15, 0.5]} intensity={0.25} color="#44aaff" distance={1.2} />
 
         {/* ── Lune + cadre fenêtre + sol ── */}
-        <Moon />
+        <Suspense fallback={null}>
+          <Moon />
+        </Suspense>
 
         {/* ── Chambre + bureau ── */}
         <Room />
@@ -334,11 +344,15 @@ export function Scene() {
           maxPolarAngle={Math.PI / 2 - 0.02}
           minPolarAngle={0.05}
         />
+        <AdaptiveRenderer cameraControlsRef={cameraControlsRef} />
       </Canvas>
 
       {/* ── Hint ── */}
       {isReady && !isFocused && !isAnimating && (
-        <div style={{
+        <div
+          aria-live="polite"
+          aria-label="Instruction : survolez le moniteur pour demarrer l'OS"
+          style={{
           position:      'absolute',
           bottom:        32,
           left:          '50%',
@@ -357,6 +371,7 @@ export function Scene() {
       {isFocused && !isAnimating && (
         <button
           onClick={zoomOut}
+          aria-label="Retour a la vue d'ensemble 3D"
           style={{
             position:    'absolute',
             top:         16,

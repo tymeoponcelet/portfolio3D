@@ -2,7 +2,8 @@
 
 // Renders portfolio text content in the main DOM for search engine indexing.
 // The OS content is inside a CSS3DRenderer iframe — invisible to crawlers.
-// Uses the screen-reader-safe hidden pattern (not penalized by Google).
+// aria-hidden="true" hides from screen readers (intentional — not a screen-reader feature).
+// The srOnly CSS makes it visually invisible but present in the DOM for crawlers.
 const srOnly = {
   position:   'absolute',
   width:      '1px',

@@ -4,7 +4,6 @@ import { useProgress } from '@react-three/drei'
 const FONT  = '"Courier New", Courier, monospace'
 const WHITE = '#ffffff'
 const DIM   = 'rgba(255,255,255,0.5)'
-const DIMMER= 'rgba(255,255,255,0.25)'
 
 const BOOT_LINES = [
   { at:  0, text: 'BIOS v2.40  —  Portfolio System' },
@@ -24,7 +23,7 @@ const getCurrentDate = () => {
   return `${mm}/${dd}/${d.getFullYear()}`
 }
 
-export function LoadingScreen({ onStart }: { onStart?: () => void }) {
+export function LoadingScreen({ onStart }) {
   const { progress, active } = useProgress()
   const [visible,    setVisible]    = useState(true)
   const [fadeOut,    setFadeOut]    = useState(false)
@@ -34,13 +33,11 @@ export function LoadingScreen({ onStart }: { onStart?: () => void }) {
 
   const isReady = !active && progress >= 99
 
-  /* Curseur clignotant */
   useEffect(() => {
     const id = setInterval(() => setBlink(b => !b), 530)
     return () => clearInterval(id)
   }, [])
 
-  /* Apparition du bouton après chargement */
   useEffect(() => {
     if (!isReady) return
     const id = setTimeout(() => setShowButton(true), 800)
@@ -68,41 +65,41 @@ export function LoadingScreen({ onStart }: { onStart?: () => void }) {
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes bios-blink {
-          0%, 49% { opacity: 1; }
-          50%, 100% { opacity: 0; }
+          0%, 49%  { opacity: 1; }
+          50%, 100%{ opacity: 0; }
         }
         .bios-cursor {
           display: inline-block;
-          width: 9px;
-          height: 15px;
-          background: ${WHITE};
+          width: 9px; height: 15px;
+          background: #fff;
           animation: bios-blink 1.06s step-end infinite;
           vertical-align: middle;
           margin-left: 2px;
         }
       `}</style>
 
+      {/* ── FOND / BOOT LOG ── */}
       <div style={{
-        position:      'fixed',
-        inset:         0,
-        zIndex:        9999,
-        background:    '#000',
-        color:         WHITE,
-        fontFamily:    FONT,
-        fontSize:      15,
-        lineHeight:    1.65,
-        letterSpacing: '0.04em',
-        display:       'flex',
-        flexDirection: 'column',
-        justifyContent:'space-between',
-        padding:       '32px 48px',
-        boxSizing:     'border-box',
-        transition:    'opacity 0.6s ease',
-        opacity:       fadeOut ? 0 : 1,
-        pointerEvents: fadeOut ? 'none' : 'auto',
+        position:       'fixed',
+        inset:          0,
+        zIndex:         9999,
+        background:     '#000',
+        color:          WHITE,
+        fontFamily:     FONT,
+        fontSize:       15,
+        lineHeight:     1.65,
+        letterSpacing:  '0.04em',
+        display:        'flex',
+        flexDirection:  'column',
+        justifyContent: 'space-between',
+        padding:        '32px 48px',
+        boxSizing:      'border-box',
+        transition:     'opacity 0.6s ease',
+        opacity:        fadeOut ? 0 : 1,
+        pointerEvents:  fadeOut ? 'none' : 'auto',
       }}>
 
-        {/* ── HEADER ── */}
+        {/* HEADER */}
         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${DIM}`, paddingBottom: 12 }}>
           <div>
             <div style={{ fontWeight: 'bold', fontSize: 17 }}>Poncelet, Tyméo Inc.</div>
@@ -114,7 +111,7 @@ export function LoadingScreen({ onStart }: { onStart?: () => void }) {
           </div>
         </div>
 
-        {/* ── BODY — boot log ── */}
+        {/* BOOT LOG */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '24px 0' }}>
           <div style={{ marginBottom: 28 }}>
             {visLines.map((l, i) => (
@@ -125,16 +122,15 @@ export function LoadingScreen({ onStart }: { onStart?: () => void }) {
             ))}
           </div>
 
-          {/* Barre de progression */}
-          <div style={{ color: WHITE, marginBottom: 4, fontFamily: FONT }}>
-            [{bar}]&nbsp;&nbsp;{pct}&nbsp;%
-          </div>
-          <div style={{ color: DIMMER, fontSize: 12 }}>
-            {isReady ? 'DONE' : 'LOADING...'}
-          </div>
+          {/* Barre — masquée quand le bouton apparaît */}
+          {!showButton && (
+            <div style={{ color: WHITE, fontFamily: FONT }}>
+              [{bar}]&nbsp;&nbsp;{pct}&nbsp;%
+            </div>
+          )}
         </div>
 
-        {/* ── FOOTER ── */}
+        {/* FOOTER */}
         <div style={{ borderTop: `1px solid ${DIM}`, paddingTop: 12, display: 'flex', justifyContent: 'space-between', color: DIM, fontSize: 13 }}>
           <div>
             Press <b style={{ color: WHITE }}>DEL</b> to enter SETUP ,{' '}
@@ -145,34 +141,47 @@ export function LoadingScreen({ onStart }: { onStart?: () => void }) {
 
       </div>
 
-      {/* ── POPUP start ── */}
+      {/* ── POPUP START ── */}
       {showButton && (
         <div style={{
-          position:   'fixed',
-          inset:      0,
-          zIndex:     10000,
-          display:    'flex',
-          alignItems: 'center',
+          position:       'fixed',
+          inset:          0,
+          zIndex:         10000,
+          display:        'flex',
+          alignItems:     'center',
           justifyContent: 'center',
-          animation:  'btn-appear 0.4s ease forwards',
+          animation:      'btn-appear 0.4s ease forwards',
         }}>
           <div style={{
             background:    '#000',
-            border:        `7px solid ${WHITE}`,
-            padding:       '28px 36px',
-            maxWidth:      480,
+            border:        `1px solid rgba(255,255,255,0.3)`,
+            outline:       `1px solid rgba(255,255,255,0.08)`,
+            padding:       '36px 52px',
+            maxWidth:      420,
+            width:         '100%',
             fontFamily:    FONT,
             color:         WHITE,
-            fontSize:      15,
-            lineHeight:    1.7,
+            fontSize:      14,
+            lineHeight:    1.8,
+            display:       'flex',
+            flexDirection: 'column',
+            gap:           16,
           }}>
-            <p style={{ marginBottom: 4 }}>Poncelet Tyméo — Portfolio 3D</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
-              <span>Click start to begin</span>
+
+            {/* Ligne titre */}
+            <div style={{ borderBottom: `1px solid ${DIM}`, paddingBottom: 12, color: DIM, fontSize: 12, letterSpacing: '0.15em' }}>
+              PORTFOLIO SYSTEM v1.0 — READY
+            </div>
+
+            <div>Poncelet Tyméo &mdash; Portfolio 3D</div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: DIM, fontSize: 13 }}>
+              <span>Appuyez sur START pour lancer</span>
               <span className="bios-cursor" />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
+            {/* Bouton */}
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 8 }}>
               <button
                 onClick={handleClick}
                 onMouseEnter={() => setBtnHover(true)}
@@ -180,21 +189,22 @@ export function LoadingScreen({ onStart }: { onStart?: () => void }) {
                 autoFocus
                 style={{
                   background:    btnHover ? WHITE : 'transparent',
-                  border:        `2px solid ${WHITE}`,
+                  border:        `1px solid ${WHITE}`,
                   color:         btnHover ? '#000' : WHITE,
                   fontFamily:    FONT,
-                  fontSize:      14,
-                  padding:       '6px 40px',
+                  fontSize:      13,
+                  padding:       '5px 32px',
                   cursor:        'pointer',
                   letterSpacing: '0.25em',
                   outline:       'none',
-                  transition:    'background 0.12s, color 0.12s',
+                  transition:    'background 0.1s, color 0.1s',
                   textTransform: 'uppercase',
                 }}
               >
                 START
               </button>
             </div>
+
           </div>
         </div>
       )}

@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ command }) => ({
   // Ton code ici...
-  base: command === 'serve' ? '/' : '/portfolio3D/',
+  base: command === 'serve' ? '/' : '/',
   plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {

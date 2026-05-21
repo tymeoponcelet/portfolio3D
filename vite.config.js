@@ -1,12 +1,17 @@
-import { defineConfig } from 'vite' // <--- CETTE LIGNE EST INDISPENSABLE
+import { defineConfig } from 'vite'
 import { resolve } from 'path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import viteCompression from 'vite-plugin-compression'
 
 export default defineConfig(({ command }) => ({
-  // Ton code ici...
-  base: command === 'serve' ? '/' : '/',
-  plugins: [react(), tailwindcss()],
+  base: '/',
+  plugins: [
+    react(),
+    tailwindcss(),
+    viteCompression({ algorithm: 'gzip' }),
+    viteCompression({ algorithm: 'brotliCompress', ext: '.br' }),
+  ],
   build: {
     rollupOptions: {
       input: {
@@ -15,8 +20,9 @@ export default defineConfig(({ command }) => ({
       },
       output: {
         manualChunks(id) {
-          if (id.includes('three')) return 'three'
+          if (id.includes('three'))        return 'three'
           if (id.includes('@react-three')) return 'r3f'
+          if (id.includes('react-dom'))    return 'react'
         },
       },
     },

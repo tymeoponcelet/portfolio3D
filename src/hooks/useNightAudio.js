@@ -15,8 +15,8 @@ export function useNightAudio() {
       fetch(url).then(r => r.arrayBuffer()).then(ab => ctx.decodeAudioData(ab))
 
     Promise.all([
-      load(`${import.meta.env.BASE_URL}sounds/entry.wav`),
-      load(`${import.meta.env.BASE_URL}sounds/ambient.mp3`),
+      load(`${import.meta.env.BASE_URL}sounds/entry.ogg`),
+      load(`${import.meta.env.BASE_URL}sounds/ambient.ogg`),
     ]).then(([entry, ambient]) => {
       bufsRef.current = { entry, ambient }
     }).catch(() => {})

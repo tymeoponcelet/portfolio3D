@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useProgress } from '@react-three/drei'
 
-const FONT   = '"Courier New", Courier, monospace'
-const GREEN  = '#33ff88'
-const DIM    = 'rgba(51,255,136,0.45)'
-const DIMMER = 'rgba(51,255,136,0.22)'
+const FONT  = '"Courier New", Courier, monospace'
+const WHITE = '#ffffff'
+const DIM   = 'rgba(255,255,255,0.5)'
+const DIMMER= 'rgba(255,255,255,0.25)'
 
 const BOOT_LINES = [
   { at:  0, text: 'BIOS v2.40  —  Portfolio System' },
@@ -17,24 +17,30 @@ const BOOT_LINES = [
   { at: 99, text: 'All systems nominal.' },
 ]
 
-export function LoadingScreen({ onStart }) {
+const getCurrentDate = () => {
+  const d = new Date()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${mm}/${dd}/${d.getFullYear()}`
+}
+
+export function LoadingScreen({ onStart }: { onStart?: () => void }) {
   const { progress, active } = useProgress()
-  const [visible,      setVisible]      = useState(true)
-  const [fadeOut,      setFadeOut]      = useState(false)
-  const [blink,        setBlink]        = useState(true)
-  const [showButton,   setShowButton]   = useState(false)
-  const [btnHover,     setBtnHover]     = useState(false)
-  const [btnActive,    setBtnActive]    = useState(false)
+  const [visible,    setVisible]    = useState(true)
+  const [fadeOut,    setFadeOut]    = useState(false)
+  const [blink,      setBlink]      = useState(true)
+  const [showButton, setShowButton] = useState(false)
+  const [btnHover,   setBtnHover]   = useState(false)
 
   const isReady = !active && progress >= 99
 
-  /* Clignotement curseur */
+  /* Curseur clignotant */
   useEffect(() => {
-    const id = setInterval(() => setBlink(b => !b), 520)
+    const id = setInterval(() => setBlink(b => !b), 530)
     return () => clearInterval(id)
   }, [])
 
-  /* Délai d'apparition du bouton après chargement complet */
+  /* Apparition du bouton après chargement */
   useEffect(() => {
     if (!isReady) return
     const id = setTimeout(() => setShowButton(true), 800)
@@ -42,136 +48,156 @@ export function LoadingScreen({ onStart }) {
   }, [isReady])
 
   const handleClick = () => {
-    setBtnActive(true)
-    setTimeout(() => {
-      onStart?.()
-      setFadeOut(true)
-      setTimeout(() => setVisible(false), 700)
-    }, 150)
+    onStart?.()
+    setFadeOut(true)
+    setTimeout(() => setVisible(false), 600)
   }
 
   if (!visible) return null
 
   const pct      = Math.round(progress)
   const filled   = Math.round(pct / 5)
-  const barFill  = '█'.repeat(filled)
-  const barEmpty = '░'.repeat(20 - filled)
+  const bar      = '█'.repeat(filled) + '░'.repeat(20 - filled)
   const visLines = BOOT_LINES.filter(l => pct >= l.at)
 
   return (
     <>
-      {/* Keyframes injectées en style global */}
       <style>{`
-        @keyframes glow-pulse {
-          0%, 100% { box-shadow: 0 0 6px rgba(51,255,136,0.3), 0 0 14px rgba(51,255,136,0.15); }
-          50%       { box-shadow: 0 0 12px rgba(51,255,136,0.6), 0 0 28px rgba(51,255,136,0.3); }
-        }
         @keyframes btn-appear {
-          from { opacity: 0; transform: translateY(6px); }
+          from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes scanline {
-          0%   { top: -30%; }
-          100% { top: 110%; }
+        @keyframes bios-blink {
+          0%, 49% { opacity: 1; }
+          50%, 100% { opacity: 0; }
+        }
+        .bios-cursor {
+          display: inline-block;
+          width: 9px;
+          height: 15px;
+          background: ${WHITE};
+          animation: bios-blink 1.06s step-end infinite;
+          vertical-align: middle;
+          margin-left: 2px;
         }
       `}</style>
 
       <div style={{
-        position:       'fixed',
-        inset:          0,
-        zIndex:         9999,
-        background:     '#000',
-        display:        'flex',
-        flexDirection:  'column',
-        alignItems:     'flex-start',
-        justifyContent: 'center',
-        padding:        '0 min(12vw, 160px)',
-        transition:     'opacity 0.7s ease',
-        opacity:        fadeOut ? 0 : 1,
-        pointerEvents:  fadeOut ? 'none' : 'auto',
-        fontFamily:     FONT,
-        fontSize:       13,
-        lineHeight:     1.7,
+        position:      'fixed',
+        inset:         0,
+        zIndex:        9999,
+        background:    '#000',
+        color:         WHITE,
+        fontFamily:    FONT,
+        fontSize:      15,
+        lineHeight:    1.65,
+        letterSpacing: '0.04em',
+        display:       'flex',
+        flexDirection: 'column',
+        justifyContent:'space-between',
+        padding:       '32px 48px',
+        boxSizing:     'border-box',
+        transition:    'opacity 0.6s ease',
+        opacity:       fadeOut ? 0 : 1,
+        pointerEvents: fadeOut ? 'none' : 'auto',
       }}>
 
-        {/* Boot log */}
-        <div style={{ marginBottom: 28, color: DIM }}>
-          {visLines.map((l, i) => (
-            <div key={i} style={{ color: i === visLines.length - 1 ? GREEN : DIM }}>
-              {i === visLines.length - 1 && '> '}{l.text}
-            </div>
-          ))}
+        {/* ── HEADER ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${DIM}`, paddingBottom: 12 }}>
+          <div>
+            <div style={{ fontWeight: 'bold', fontSize: 17 }}>Poncelet, Tyméo Inc.</div>
+            <div style={{ color: DIM, fontSize: 13 }}>PTBIOS (C){new Date().getFullYear()}</div>
+          </div>
+          <div style={{ textAlign: 'right', color: DIM, fontSize: 13 }}>
+            <div>Released: 01/01/2025</div>
+            <div>Portfolio System v1.0</div>
+          </div>
         </div>
 
-        {/* Barre de progression */}
-        <div style={{ color: GREEN, marginBottom: 6 }}>
-          [{barFill}{barEmpty}]&nbsp;&nbsp;{pct}&nbsp;%
+        {/* ── BODY — boot log ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '24px 0' }}>
+          <div style={{ marginBottom: 28 }}>
+            {visLines.map((l, i) => (
+              <div key={i} style={{ color: i === visLines.length - 1 ? WHITE : DIM }}>
+                {i === visLines.length - 1 ? '> ' : '\u00a0\u00a0'}{l.text}
+                {i === visLines.length - 1 && !isReady && <span className="bios-cursor" />}
+              </div>
+            ))}
+          </div>
+
+          {/* Barre de progression */}
+          <div style={{ color: WHITE, marginBottom: 4, fontFamily: FONT }}>
+            [{bar}]&nbsp;&nbsp;{pct}&nbsp;%
+          </div>
+          <div style={{ color: DIMMER, fontSize: 12 }}>
+            {isReady ? 'DONE' : 'LOADING...'}
+          </div>
         </div>
 
-        {/* Bouton ou curseur */}
-        {showButton ? (
-          <div style={{
-            marginTop:  24,
-            animation:  'btn-appear 0.4s ease forwards',
-          }}>
-            {/* Label au-dessus */}
-            <div style={{
-              color:         DIM,
-              fontSize:      11,
-              letterSpacing: '0.2em',
-              marginBottom:  8,
-            }}>
-              — SYSTEM READY —
-            </div>
-
-            <button
-              onClick={handleClick}
-              onMouseEnter={() => setBtnHover(true)}
-              onMouseLeave={() => setBtnHover(false)}
-              autoFocus
-              style={{
-                position:      'relative',
-                overflow:      'hidden',
-                background:    btnHover
-                  ? 'rgba(51,255,136,0.07)'
-                  : btnActive
-                    ? 'rgba(51,255,136,0.18)'
-                    : 'transparent',
-                border:        `1px solid ${GREEN}`,
-                color:         GREEN,
-                fontFamily:    FONT,
-                fontSize:      13,
-                padding:       '8px 36px',
-                cursor:        'pointer',
-                letterSpacing: '0.3em',
-                outline:       'none',
-                animation:     'glow-pulse 2s ease-in-out infinite',
-                transition:    'background 0.15s ease',
-                textTransform: 'uppercase',
-              }}
-            >
-              {/* Scanline animée au hover */}
-              {btnHover && (
-                <span style={{
-                  position:   'absolute',
-                  left:       0,
-                  width:      '100%',
-                  height:     '30%',
-                  background: 'linear-gradient(transparent, rgba(51,255,136,0.07), transparent)',
-                  animation:  'scanline 0.8s linear infinite',
-                  pointerEvents: 'none',
-                }} />
-              )}
-              ENTER{blink ? '_' : '\u00a0'}
-            </button>
+        {/* ── FOOTER ── */}
+        <div style={{ borderTop: `1px solid ${DIM}`, paddingTop: 12, display: 'flex', justifyContent: 'space-between', color: DIM, fontSize: 13 }}>
+          <div>
+            Press <b style={{ color: WHITE }}>DEL</b> to enter SETUP ,{' '}
+            <b style={{ color: WHITE }}>ESC</b> to skip memory test
           </div>
-        ) : (
-          <div style={{ color: DIMMER, marginTop: 4, fontSize: 12 }}>
-            {blink ? '▌' : '\u00a0'}
-          </div>
-        )}
+          <div>{getCurrentDate()}</div>
+        </div>
 
       </div>
+
+      {/* ── POPUP start ── */}
+      {showButton && (
+        <div style={{
+          position:   'fixed',
+          inset:      0,
+          zIndex:     10000,
+          display:    'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          animation:  'btn-appear 0.4s ease forwards',
+        }}>
+          <div style={{
+            background:    '#000',
+            border:        `7px solid ${WHITE}`,
+            padding:       '28px 36px',
+            maxWidth:      480,
+            fontFamily:    FONT,
+            color:         WHITE,
+            fontSize:      15,
+            lineHeight:    1.7,
+          }}>
+            <p style={{ marginBottom: 4 }}>Poncelet Tyméo — Portfolio 3D</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
+              <span>Click start to begin</span>
+              <span className="bios-cursor" />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={handleClick}
+                onMouseEnter={() => setBtnHover(true)}
+                onMouseLeave={() => setBtnHover(false)}
+                autoFocus
+                style={{
+                  background:    btnHover ? WHITE : 'transparent',
+                  border:        `2px solid ${WHITE}`,
+                  color:         btnHover ? '#000' : WHITE,
+                  fontFamily:    FONT,
+                  fontSize:      14,
+                  padding:       '6px 40px',
+                  cursor:        'pointer',
+                  letterSpacing: '0.25em',
+                  outline:       'none',
+                  transition:    'background 0.12s, color 0.12s',
+                  textTransform: 'uppercase',
+                }}
+              >
+                START
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

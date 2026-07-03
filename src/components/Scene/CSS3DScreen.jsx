@@ -46,6 +46,13 @@ const _pos    = new THREE.Vector3()
 const _quat   = new THREE.Quaternion()
 const _normal = new THREE.Vector3()
 
+// Temporaires pour le forwarding d'événements (raycast → iframe)
+const _hitPos   = new THREE.Vector3()
+const _hitQuat  = new THREE.Quaternion()
+const _right    = new THREE.Vector3()
+const _upVec    = new THREE.Vector3()
+const _delta    = new THREE.Vector3()
+
 // ── Géométrie occulteur avec coins arrondis ───────────────────────
 // ShapeGeometry avec quadratic bezier aux 4 coins → épouse le bezel CRT
 function createRoundedRectGeometry(w, h, r) {
@@ -232,31 +239,123 @@ export function CSS3DScreen({ screenMesh, isFocused, onScreenLeave }) {
     return () => window.removeEventListener('resize', onResize)
   }, [gl])
 
-  // ── Pointer events selon isFocused ────────────────────────────────
+  // ── Interaction : forwarding d'événements parent → iframe ─────────
+  // Chrome/Safari ne délivrent PAS les événements souris à une iframe
+  // placée sous une transformation CSS matrix3d (le rendu CSS3D). Seul
+  // Firefox le fait → d'où « tout ne marche que sur Firefox ».
+  // Solution (technique Henry Heffernan) : le canvas reçoit le pointeur
+  // réel, on raycaste le mesh-écran, on convertit le point d'impact en
+  // coordonnées pixel de l'iframe, et on redispatche des événements
+  // synthétiques DANS l'iframe. Marche dans tous les navigateurs.
   useEffect(() => {
-    if (!iframeRef.current) return
-    iframeRef.current.style.pointerEvents             = isFocused ? 'auto' : 'none'
-    gl.domElement.style.pointerEvents                 = isFocused ? 'none' : 'auto'
-    if (cssRenderer.current)
-      cssRenderer.current.domElement.style.pointerEvents = isFocused ? 'auto' : 'none'
-
-    // Quand focused : dézoom si la souris s'éloigne suffisamment de l'iframe
-    const LEAVE_MARGIN = 220   // px autour de l'iframe avant de déclencher le dezoom
     const iframe = iframeRef.current
-    if (isFocused && onScreenLeave && iframe) {
-      const handleMove = (e) => {
-        const r = iframe.getBoundingClientRect()
-        if (
-          e.clientX < r.left   - LEAVE_MARGIN ||
-          e.clientX > r.right  + LEAVE_MARGIN ||
-          e.clientY < r.top    - LEAVE_MARGIN ||
-          e.clientY > r.bottom + LEAVE_MARGIN
-        ) onScreenLeave()
-      }
-      window.addEventListener('mousemove', handleMove)
-      return () => window.removeEventListener('mousemove', handleMove)
+    if (!iframe) return
+
+    // Le canvas reçoit toujours le pointeur ; l'iframe jamais en direct.
+    iframe.style.pointerEvents = 'none'
+    gl.domElement.style.pointerEvents = 'auto'
+    if (cssRenderer.current)
+      cssRenderer.current.domElement.style.pointerEvents = 'none'
+
+    if (!isFocused || !screenMesh) return
+
+    const raycaster = new THREE.Raycaster()
+    const ndc       = new THREE.Vector2()
+    const S         = CSS3D_SCALE * CSS3D_SCALE_BOOST
+
+    // Point écran (client px du canvas) → pixel dans le DOM de l'iframe.
+    // On projette le point d'impact sur les axes droite/haut de l'écran
+    // (mêmes position/quaternion/échelle que ceux qui placent l'iframe via
+    // CSS3DRenderer) → alignement garanti avec ce que l'utilisateur voit.
+    const toIframePx = (clientX, clientY) => {
+      const rect = gl.domElement.getBoundingClientRect()
+      ndc.x =  ((clientX - rect.left) / rect.width)  * 2 - 1
+      ndc.y = -((clientY - rect.top)  / rect.height) * 2 + 1
+      raycaster.setFromCamera(ndc, camera)
+      const hits = raycaster.intersectObject(screenMesh, false)
+      if (!hits.length) return null
+      screenMesh.getWorldPosition(_hitPos)
+      screenMesh.getWorldQuaternion(_hitQuat)
+      _right.set(1, 0, 0).applyQuaternion(_hitQuat)
+      _upVec.set(0, 1, 0).applyQuaternion(_hitQuat)
+      _delta.copy(hits[0].point).sub(_hitPos)
+      const px = SCREEN_DOM_W / 2 + _delta.dot(_right) / S
+      const py = SCREEN_DOM_H / 2 - _delta.dot(_upVec) / S
+      return { px, py }
     }
-  }, [isFocused, gl, onScreenLeave])
+
+    // Redispatche un événement synthétique dans l'iframe à (px, py).
+    const fire = (type, px, py, buttons) => {
+      const doc = iframe.contentDocument
+      const win = iframe.contentWindow
+      if (!doc || !win) return null
+      const target    = doc.elementFromPoint(px, py) || doc.body
+      const isPointer = type[0] === 'p'
+      const Ctor      = isPointer ? (win.PointerEvent || win.MouseEvent) : win.MouseEvent
+      const init = {
+        bubbles: true, cancelable: true, composed: true,
+        clientX: px, clientY: py, screenX: px, screenY: py,
+        view: win, button: 0, buttons: buttons ?? 0, detail: 1,
+      }
+      if (isPointer) { init.pointerId = 1; init.pointerType = 'mouse'; init.isPrimary = true }
+      target.dispatchEvent(new Ctor(type, init))
+      return target
+    }
+
+    let down            = false
+    let lastClickTime   = 0
+    let lastClickTarget = null
+
+    const onDown = (e) => {
+      const p = toIframePx(e.clientX, e.clientY)
+      if (!p) return
+      down = true
+      fire('pointerdown', p.px, p.py, 1)
+      fire('mousedown',   p.px, p.py, 1)
+    }
+    const onMove = (e) => {
+      const p = toIframePx(e.clientX, e.clientY)
+      if (!p) return
+      fire('pointermove', p.px, p.py, down ? 1 : 0)
+      fire('mousemove',   p.px, p.py, down ? 1 : 0)
+    }
+    const onUp = (e) => {
+      const p = toIframePx(e.clientX, e.clientY)
+      down = false
+      if (!p) return
+      fire('pointerup', p.px, p.py, 0)
+      fire('mouseup',   p.px, p.py, 0)
+      const clickTarget = fire('click', p.px, p.py, 0)
+      const now = performance.now()
+      if (now - lastClickTime < 400 && clickTarget === lastClickTarget) {
+        fire('dblclick', p.px, p.py, 0)
+        lastClickTime = 0; lastClickTarget = null
+      } else {
+        lastClickTime = now; lastClickTarget = clickTarget
+      }
+    }
+
+    // Dézoom si la souris s'éloigne franchement de l'écran (raycast raté).
+    let missFrames = 0
+    const onLeaveCheck = (e) => {
+      if (!onScreenLeave || down) return
+      if (toIframePx(e.clientX, e.clientY)) { missFrames = 0; return }
+      if (++missFrames > 6) onScreenLeave()
+    }
+
+    const canvas = gl.domElement
+    canvas.addEventListener('pointerdown', onDown)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup',   onUp)
+    window.addEventListener('mousemove',   onLeaveCheck)
+
+    return () => {
+      canvas.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup',   onUp)
+      window.removeEventListener('mousemove',   onLeaveCheck)
+    }
+  }, [isFocused, screenMesh, gl, camera, onScreenLeave])
 
   // ── Sync chaque frame ─────────────────────────────────────────────
   useFrame(() => {

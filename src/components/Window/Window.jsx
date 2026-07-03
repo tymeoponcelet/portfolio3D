@@ -71,7 +71,6 @@ export function Window({
 
   const x = useMotionValue(position.x)
   const y = useMotionValue(position.y)
-  const dragState = useRef(null)
 
   useEffect(() => {
     x.set(position.x)
@@ -90,51 +89,41 @@ export function Window({
     if (windowRef.current) windowRef.current.style.willChange = val
   }, [])
 
-  /* ── Titlebar — drag manuel via Pointer Events ───────────────────
-     On capture le pointeur sur la titlebar : tous les pointermove /
-     pointerup lui sont alors délivrés de façon fiable dans TOUS les
-     navigateurs (contrairement au geste `drag` de framer-motion qui
-     décroche dans une iframe transformée en 3D hors Firefox). */
+  /* ── Titlebar — drag manuel via events souris sur `window` ───────
+     L'OS tourne dans une iframe transformée en matrix3d (CSS3DRenderer).
+     Dans Chrome/Safari, setPointerCapture y est peu fiable : les
+     pointermove cessent d'arriver dès que le curseur quitte la titlebar
+     → la fenêtre ne bougeait que dans Firefox.
+     On écoute donc mousemove/mouseup sur `window` (le window de l'iframe),
+     mécanisme prouvé fiable dans TOUS les navigateurs — c'est déjà celui
+     qu'utilise os-main.jsx pour transmettre la souris à la scène 3D. */
   const handleTitlebarDown = useCallback((e) => {
     if (isMaximized) return
-    if (e.button != null && e.button !== 0) return   // clic gauche uniquement
+    if (e.button !== 0) return   // clic gauche uniquement
     e.stopPropagation()
 
-    const el = e.currentTarget
-    try { el.setPointerCapture(e.pointerId) } catch (_) {}
+    const startX  = e.clientX
+    const startY  = e.clientY
+    const originX = x.get()
+    const originY = y.get()
 
-    dragState.current = {
-      pointerId: e.pointerId,
-      startX:    e.clientX,
-      startY:    e.clientY,
-      originX:   x.get(),
-      originY:   y.get(),
-    }
     setIsDragging(true)
     setWillChange('transform')
 
     const onMove = (ev) => {
-      const st = dragState.current
-      if (!st || ev.pointerId !== st.pointerId) return
-      x.set(st.originX + (ev.clientX - st.startX))
-      y.set(st.originY + (ev.clientY - st.startY))
+      x.set(originX + (ev.clientX - startX))
+      y.set(originY + (ev.clientY - startY))
     }
-    const onUp = (ev) => {
-      const st = dragState.current
-      if (!st || ev.pointerId !== st.pointerId) return
-      el.removeEventListener('pointermove',   onMove)
-      el.removeEventListener('pointerup',     onUp)
-      el.removeEventListener('pointercancel', onUp)
-      try { el.releasePointerCapture(st.pointerId) } catch (_) {}
-      dragState.current = null
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup',   onUp)
       setIsDragging(false)
       setWillChange('auto')
       updatePosition(id, { x: x.get(), y: y.get() })
     }
 
-    el.addEventListener('pointermove',   onMove)
-    el.addEventListener('pointerup',     onUp)
-    el.addEventListener('pointercancel', onUp)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup',   onUp)
   }, [isMaximized, x, y, id, updatePosition, setWillChange])
 
   /* ── Focus ────────────────────────────────────────────────────── */

@@ -9,9 +9,12 @@ permissions:
   pages: write
   id-token: write
 
+# cancel-in-progress: false → ne pas interrompre un déploiement Pages en cours
+# (des déploiements annulés provoquent « Deployment failed, try again later »).
+# C'est le réglage recommandé par le workflow Pages officiel de GitHub.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:

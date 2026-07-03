@@ -1,13 +1,16 @@
 // src/components/Window/Window.jsx
 //
 // Approche Henry Heffernan :
-//   - Drag via framer-motion (dragControls + setPointerCapture)
+//   - Drag MANUEL via Pointer Events (setPointerCapture + pointermove)
+//     → framer-motion `drag` ne suit pas le pointeur de façon fiable dans
+//       une iframe sous transform matrix3d hors Firefox (Chrome/Safari) :
+//       on gère donc le déplacement nous-mêmes, ce qui marche partout.
 //   - Pas de resize : taille fixe définie à l'ouverture
 //   - DragIndicator (overlay pointillés pendant le drag)
 //   - will-change:transform activé SEULEMENT pendant le drag
 
 import { useRef, useState, useCallback, useEffect, memo } from 'react'
-import { motion, useMotionValue, useDragControls }         from 'framer-motion'
+import { motion, useMotionValue }                          from 'framer-motion'
 import { getIcon }                                         from '../../assets/icons/index.js'
 import { DragIndicator }                                   from './DragIndicator.jsx'
 import { useOSStore }                                      from '../../stores/osStore'
@@ -66,9 +69,9 @@ export function Window({
     focusWindow, updatePosition,
   } = useOSStore()
 
-  const dragControls = useDragControls()
   const x = useMotionValue(position.x)
   const y = useMotionValue(position.y)
+  const dragState = useRef(null)
 
   useEffect(() => {
     x.set(position.x)
@@ -87,19 +90,52 @@ export function Window({
     if (windowRef.current) windowRef.current.style.willChange = val
   }, [])
 
-  /* ── Titlebar — pointerdown ──────────────────────────────────── */
+  /* ── Titlebar — drag manuel via Pointer Events ───────────────────
+     On capture le pointeur sur la titlebar : tous les pointermove /
+     pointerup lui sont alors délivrés de façon fiable dans TOUS les
+     navigateurs (contrairement au geste `drag` de framer-motion qui
+     décroche dans une iframe transformée en 3D hors Firefox). */
   const handleTitlebarDown = useCallback((e) => {
     if (isMaximized) return
-    try { e.currentTarget.setPointerCapture(e.pointerId) } catch (_) {}
+    if (e.button != null && e.button !== 0) return   // clic gauche uniquement
     e.stopPropagation()
-    setWillChange('transform')
-    dragControls.start(e)
-  }, [isMaximized, dragControls, setWillChange])
 
-  const handleTitlebarUp = useCallback((e) => {
-    try { e.currentTarget.releasePointerCapture(e.pointerId) } catch (_) {}
-    setWillChange('auto')
-  }, [setWillChange])
+    const el = e.currentTarget
+    try { el.setPointerCapture(e.pointerId) } catch (_) {}
+
+    dragState.current = {
+      pointerId: e.pointerId,
+      startX:    e.clientX,
+      startY:    e.clientY,
+      originX:   x.get(),
+      originY:   y.get(),
+    }
+    setIsDragging(true)
+    setWillChange('transform')
+
+    const onMove = (ev) => {
+      const st = dragState.current
+      if (!st || ev.pointerId !== st.pointerId) return
+      x.set(st.originX + (ev.clientX - st.startX))
+      y.set(st.originY + (ev.clientY - st.startY))
+    }
+    const onUp = (ev) => {
+      const st = dragState.current
+      if (!st || ev.pointerId !== st.pointerId) return
+      el.removeEventListener('pointermove',   onMove)
+      el.removeEventListener('pointerup',     onUp)
+      el.removeEventListener('pointercancel', onUp)
+      try { el.releasePointerCapture(st.pointerId) } catch (_) {}
+      dragState.current = null
+      setIsDragging(false)
+      setWillChange('auto')
+      updatePosition(id, { x: x.get(), y: y.get() })
+    }
+
+    el.addEventListener('pointermove',   onMove)
+    el.addEventListener('pointerup',     onUp)
+    el.addEventListener('pointercancel', onUp)
+  }, [isMaximized, x, y, id, updatePosition, setWillChange])
 
   /* ── Focus ────────────────────────────────────────────────────── */
   const handleWindowDown = useCallback(() => {
@@ -131,17 +167,6 @@ export function Window({
         x: isMaximized ? 0 : x,
         y: isMaximized ? 0 : y,
       }}
-      drag={!isMaximized}
-      dragControls={dragControls}
-      dragListener={false}
-      dragMomentum={false}
-      dragElastic={0}
-      onDragStart={() => { setIsDragging(true); setWillChange('transform') }}
-      onDragEnd={() => {
-        setIsDragging(false)
-        setWillChange('auto')
-        updatePosition(id, { x: x.get(), y: y.get() })
-      }}
       onPointerDown={handleWindowDown}
       variants={VARIANTS}
       initial="hidden"
@@ -152,9 +177,8 @@ export function Window({
       {/* ── Titlebar ──────────────────────────────────────────────── */}
       <div
         className={cn('win95-titlebar', rainbow && 'rainbow')}
-        style={{ cursor: isMaximized ? 'default' : 'move', flexShrink: 0 }}
+        style={{ cursor: isMaximized ? 'default' : 'move', flexShrink: 0, touchAction: 'none' }}
         onPointerDown={handleTitlebarDown}
-        onPointerUp={handleTitlebarUp}
         onDoubleClick={() => maximizeWindow(id)}
       >
         <div className="win95-title-left">

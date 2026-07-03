@@ -65,6 +65,17 @@ export function ContactApp() {
         </p>
       </div>
 
+      <div style={{ marginTop: 12, marginBottom: 4 }}>
+        <a
+          href={`${import.meta.env.BASE_URL}CV-Tymeo-Poncelet.pdf`}
+          download="CV-Tymeo-Poncelet.pdf"
+          className="site-button"
+          style={{ textDecoration: 'none', color: '#000', gap: 8 }}
+        >
+          📄 Télécharger mon CV
+        </a>
+      </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
 
         <label>

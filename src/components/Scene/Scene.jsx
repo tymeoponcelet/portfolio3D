@@ -373,6 +373,29 @@ export function Scene() {
         </div>
       )}
 
+      {/* ── Crédit du modèle 3D du chat (licence CC BY 4.0 : attribution obligatoire) ── */}
+      {isReady && !isFocused && (
+        <div style={{
+          position:   'absolute',
+          right:      12,
+          bottom:     8,
+          color:      'rgba(255,255,255,0.32)',
+          fontFamily: 'MS Sans Serif, Arial, sans-serif',
+          fontSize:   11,
+        }}>
+          Chat : «&nbsp;
+          <a href="https://sketchfab.com/3d-models/sleepy-comfy-cat-2c2baa9563db4f20ba23f869ec3288dc"
+             target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>Sleepy Comfy Cat</a>
+          &nbsp;» par{' '}
+          <a href="https://sketchfab.com/leoskateman" target="_blank" rel="noopener noreferrer"
+             style={{ color: 'inherit' }}>Léonard Doye</a>
+          {' '}—{' '}
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer"
+             style={{ color: 'inherit' }}>CC BY 4.0</a>
+          {' '}(simplifié et ré-éclairé)
+        </div>
+      )}
+
       {/* ── Bouton Retour ── */}
       {isFocused && !isAnimating && (
         <button

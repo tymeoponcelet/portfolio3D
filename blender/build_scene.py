@@ -63,8 +63,42 @@ def build_window(col):
             bpy.data.objects.remove(bpy.data.objects[n], do_unlink=True)
 
 
+MAX_IMPORT_TRIS = 15000   # au-delà, le modèle importé est simplifié (Decimate)
+
+
+def _tris(ob):
+    return sum(len(p.vertices) - 2 for p in ob.data.polygons)
+
+
+def _decimate(ob, max_tris):
+    before = _tris(ob)
+    if before > max_tris:
+        select_only([ob])
+        mod = ob.modifiers.new("decimate", "DECIMATE")
+        mod.ratio = max_tris / before
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+    return before, _tris(ob)
+
+
+def _origin_bottom_center(ob):
+    """Fige les transformations puis place l'origine au centre-bas du modèle
+    (comme les objets générés : posé « au sol » de son emplacement)."""
+    from mathutils import Matrix
+    select_only([ob])
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    xs = [v.co.x for v in ob.data.vertices]; ys = [v.co.y for v in ob.data.vertices]
+    zs = [v.co.z for v in ob.data.vertices]
+    c = Vector(((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, min(zs)))
+    ob.data.transform(Matrix.Translation(-c))
+    ob.location = (0, 0, 0)
+    return Vector((max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs)))
+
+
 def apply_imports(props_col):
-    """blender/imports/*.glb : remplace l'objet du même nom ou s'ajoute."""
+    """blender/imports/*.glb : remplace l'objet du même nom ou s'ajoute.
+    Simplifié si trop lourd ; remis à l'échelle de l'objet remplacé (sauf
+    `scale` dans placements.json) ; origine au centre-bas."""
+    from mathutils import Matrix
     placements = {}
     pfile = IMPORTS / "placements.json"
     if pfile.exists():
@@ -72,21 +106,30 @@ def apply_imports(props_col):
     for glb in sorted(IMPORTS.glob("*.glb")):
         name = glb.stem
         old = bpy.data.objects.get(name)
-        loc, rot = (old.location.copy(), old.rotation_euler.copy()) if old else (Vector(), Euler())
+        loc = old.location.copy() if old else Vector()
+        old_dims = old.dimensions.copy() if old else None
         if old:
             bpy.data.objects.remove(old, do_unlink=True)
         new = import_glb(glb, props_col)
         ob = join(new, name)
+        before, after = _decimate(ob, MAX_IMPORT_TRIS)
+        dims = _origin_bottom_center(ob)
         p = placements.get(name, {})
+        if "scale" in p:
+            f = p["scale"]
+        elif old_dims is not None:
+            f = max(old_dims.x, old_dims.y) / max(dims.x, dims.y, 1e-6)   # même emprise au sol
+        else:
+            f = 1.0
+        ob.data.transform(Matrix.Scale(f, 4))
         ob.location = Vector(site_to_bl(*p["position"])) if "position" in p else loc
         if "rotation_deg" in p:
             rx, ry, rz = (math.radians(a) for a in p["rotation_deg"])
             ob.rotation_euler = Euler((rx, -rz, ry))
-        else:
-            ob.rotation_euler = rot
-        if "scale" in p:
-            ob.scale = (p["scale"],) * 3
-        print(f"[import] {glb.name} -> {name} ({'remplace' if old else 'ajout'})")
+            select_only([ob])
+            bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+        print(f"[import] {glb.name} -> {name} ({'remplace' if old else 'ajout'}) "
+              f"{before} -> {after} triangles, échelle x{f:.3f}")
 
 
 def main():

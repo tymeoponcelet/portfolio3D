@@ -36,9 +36,9 @@ export const win95sounds = {
   error:    () => { tone(300, 0.15, 'square', 0.3); setTimeout(() => tone(250, 0.2, 'square', 0.25), 170) },
   bsod:     () => tone(180, 1.0, 'square', 0.35),
   startup:  () => {
-    // Uses Audio element (not Web Audio API) — startup.mp3 is a recorded chime, not synthesised.
+    // Uses Audio element (not Web Audio API) — startup.ogg is a recorded chime, not synthesised.
     try {
-      const a = new Audio(`${import.meta.env.BASE_URL}sounds/startup.mp3`)
+      const a = new Audio(`${import.meta.env.BASE_URL}sounds/startup.ogg`)
       a.volume = 0.6
       a.play().catch(() => {})
     } catch (_) {}

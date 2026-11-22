@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useWindowStore } from '../../stores/windowStore'
 import { CSS3DScreen } from './CSS3DScreen'
+import { optimizeGLTF } from '../../utils/optimizeGLTF'
+import { IS_LOW_END } from '../../utils/perf'
 import {
   PC_MODEL_SCALE,
   DEBUG_HIGHLIGHT_SCREEN,
@@ -81,9 +83,27 @@ export function VintagePC({ onMonitorEnter, onMonitorLeave, onScreenLeave, isFoc
   const setScreenCenter = useWindowStore((s) => s.setScreenCenter)
   const [screenInfo, setScreenInfo] = useState(null)
   const [screenMesh, setScreenMesh] = useState(null)
+  const [hitbox,     setHitbox]     = useState(null)
   // Debounce leave pour éviter les flickering entre les meshes enfants
   const leaveTimer  = useRef(null)
   const isOverRef   = useRef(false)
+
+  // Avant le premier rendu : 20 textures 2048² ≈ 400 Mo de mémoire GPU →
+  // réduites à 1024² sur les machines modestes (+ clearcoat coupé).
+  useMemo(() => {
+    optimizeGLTF(scene, IS_LOW_END
+      ? { maxTextureSize: 1024, dropClearcoat: true }
+      : {})
+  }, [scene])
+
+  // En mode écran, la hitbox est démontée : son état « survolé » doit repartir
+  // de zéro, sinon le prochain survol après « Retour » serait ignoré.
+  useEffect(() => {
+    if (!isFocused) return
+    clearTimeout(leaveTimer.current)
+    isOverRef.current = false
+    document.body.style.cursor = 'auto'
+  }, [isFocused])
 
   useEffect(() => {
     // ① Matrices world à jour — DOIT précéder tout Box3.setFromObject.
@@ -143,6 +163,18 @@ export function VintagePC({ onMonitorEnter, onMonitorLeave, onScreenLeave, isFoc
     setScreenCenter({ x: worldCenter.x, y: worldCenter.y, z: worldCenter.z })
     setScreenInfo({ localPos, worldQuat })
 
+    // Hitbox de survol : boîte englobante du modèle (coords locales du
+    // <primitive>, donc avant scale). React-Three-Fiber raycaste à CHAQUE
+    // mouvement de souris tout objet ayant des handlers : sur le modèle
+    // complet (~105 000 triangles) c'était plusieurs ms de CPU par mouvement.
+    // Une boîte = 12 triangles.
+    const localBox = new THREE.Box3().setFromObject(scene)
+    const inv = new THREE.Matrix4().copy(scene.matrixWorld).invert()
+    localBox.applyMatrix4(inv)
+    const hbCenter = new THREE.Vector3(); localBox.getCenter(hbCenter)
+    const hbSize   = new THREE.Vector3(); localBox.getSize(hbSize)
+    setHitbox({ center: hbCenter.toArray(), size: hbSize.toArray() })
+
     return () => setScreenRef(null)
   }, [nodes, scene, setScreenRef, setScreenCenter])
 
@@ -151,25 +183,34 @@ export function VintagePC({ onMonitorEnter, onMonitorLeave, onScreenLeave, isFoc
       object={scene}
       scale={PC_MODEL_SCALE}
       dispose={null}
-      onPointerOver={(e) => {
-        e.stopPropagation()
-        document.body.style.cursor = 'pointer'
-        clearTimeout(leaveTimer.current)
-        if (!isOverRef.current) {
-          isOverRef.current = true
-          onMonitorEnter?.()
-        }
-      }}
-      onPointerOut={(e) => {
-        e.stopPropagation()
-        document.body.style.cursor = 'auto'
-        // Délai court : évite un leave/enter rapide entre deux meshes enfants
-        leaveTimer.current = setTimeout(() => {
-          isOverRef.current = false
-          onMonitorLeave?.()
-        }, 80)
-      }}
     >
+      {/* ── Hitbox de survol (invisible) — démontée en mode écran ── */}
+      {hitbox && !isFocused && (
+        <mesh
+          position={hitbox.center}
+          onPointerOver={(e) => {
+            e.stopPropagation()
+            document.body.style.cursor = 'pointer'
+            clearTimeout(leaveTimer.current)
+            if (!isOverRef.current) {
+              isOverRef.current = true
+              onMonitorEnter?.()
+            }
+          }}
+          onPointerOut={(e) => {
+            e.stopPropagation()
+            document.body.style.cursor = 'auto'
+            leaveTimer.current = setTimeout(() => {
+              isOverRef.current = false
+              onMonitorLeave?.()
+            }, 80)
+          }}
+        >
+          <boxGeometry args={hitbox.size} />
+          <meshBasicMaterial visible={false} />
+        </mesh>
+      )}
+
       {/* ── Halo CRT : lueur bleue devant l'écran ── */}
       {screenInfo && (
         <pointLight

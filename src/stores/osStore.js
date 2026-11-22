@@ -45,7 +45,10 @@ export const useOSStore = create((set, get) => {
     const id     = _idCounter++
     const count  = windows.length
     const zIndex = ++_zCounter
-    const { screenWidth, screenHeight } = get()
+    // Taille lue au moment d'ouvrir : dans Chrome, la taille de l'iframe lue
+    // au démarrage d'os-main était fausse → fenêtres collées en haut de l'écran.
+    const screenWidth  = window.innerWidth  || get().screenWidth
+    const screenHeight = window.innerHeight || get().screenHeight
     const TASKBAR_H = 28
     const desktopW  = screenWidth
     const desktopH  = screenHeight - TASKBAR_H
@@ -60,7 +63,10 @@ export const useOSStore = create((set, get) => {
           icon:        config.icon  ?? null,
           rainbow:     config.rainbow ?? false,
           content:     config.content,
-          position:    { x: Math.round((desktopW - (config.width ?? 580)) / 2) + (count % 4) * 16, y: Math.round((desktopH - (config.height ?? 400)) / 2) + (count % 4) * 16 },
+          position:    {
+            x: Math.max(0, Math.round((desktopW - (config.width  ?? 580)) / 2)) + (count % 4) * 16,
+            y: Math.max(0, Math.round((desktopH - (config.height ?? 400)) / 2)) + (count % 4) * 16,
+          },
           size:        { width: config.width ?? 580, height: config.height ?? 400 },
           isMinimized: false,
           isMaximized: false,

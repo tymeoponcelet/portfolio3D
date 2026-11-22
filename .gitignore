@@ -38,3 +38,7 @@ scripts/extract-style-tokens.cjs
 # Misplaced generated files
 public/models/.claude/
 public/models/Vintage_pc.jsx
+
+# Pipeline Blender (sorties intermédiaires)
+blender/out/
+__pycache__/

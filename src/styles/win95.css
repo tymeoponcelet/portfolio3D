@@ -69,18 +69,19 @@
   );
 }
 
-/* (Micro-jitter CRT retiré : animation infinie invisible à l'échelle de
-   l'écran 3D, mais qui forçait une recomposition continue de l'iframe.) */
+/* Micro-jitter CRT (< 0.25px, Henry exact) */
+.jitter {
+  animation: jittery 0.3s ease-in-out infinite;
+}
 
-/* ──────────────────────────────────────────────────────────────
-   MODE PERFORMANCE — PC modestes (html[data-perf="low"], posé par os-main)
-   On coupe les effets qui coûtent à chaque image ou à chaque déplacement
-   de fenêtre : grain en mix-blend-mode, flicker, titre arc-en-ciel animé.
-   ────────────────────────────────────────────────────────────── */
-[data-perf="low"] .win95-grain::after      { display: none; }
-[data-perf="low"] .win95-crt-root          { animation: none; }
-[data-perf="low"] .win95-titlebar.rainbow  { animation: none; background-size: 100% 100%; }
-[data-perf="low"] .win95-window            { transition: none; }
+@keyframes jittery {
+  5%  { transform: translate(-0.08px, -0.12px) scale(1); }
+  10% { transform: translate( 0.00px,  0.00px) scale(1); }
+  30% { transform: translate(-0.15px, -0.20px) scale(1); }
+  50% { transform: translate( 0.00px,  0.00px) scale(1); }
+  70% { transform: translate(-0.10px,  0.08px) scale(1); }
+  90% { transform: translate( 0.00px,  0.00px) scale(1); }
+}
 
 /* ──────────────────────────────────────────────────────────────
    THÈME RETRO-LIGHT (Win95 classique — Heffernan exact)

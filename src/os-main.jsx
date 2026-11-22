@@ -3,7 +3,6 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { OS } from './components/OS/OS'
 import { useOSStore } from './stores/osStore'
-import { IS_LOW_END } from './utils/perf'
 import './styles/win95.css'
 
 // Transmet les dimensions réelles de l'iframe au store → centrage fenêtres correct
@@ -12,7 +11,7 @@ useOSStore.getState().setScreenSize(window.innerWidth, window.innerHeight)
 // Click sound : joué directement dans l'iframe (zéro latence, pas de postMessage)
 const _clickCtx = new (window.AudioContext || window.webkitAudioContext)()
 let   _clickBuf = null
-fetch(`${import.meta.env.BASE_URL}sounds/mouse.ogg`)
+fetch(`${import.meta.env.BASE_URL}sounds/mouse.mp3`)
   .then(r => r.arrayBuffer())
   .then(ab => _clickCtx.decodeAudioData(ab))
   .then(buf => { _clickBuf = buf })
@@ -27,17 +26,19 @@ window.addEventListener('mousedown', () => {
   src.start()
 })
 
-// Forwarding clavier vers le parent (Échap pour quitter l'écran quand le
-// focus est dans l'OS). La souris n'est plus renvoyée : personne ne
-// l'écoutait et cela coûtait un postMessage par mouvement.
-;['keydown', 'keyup'].forEach((type) => {
+// Forwarding des événements vers le parent (technique Henry Heffernan) :
+// l'iframe ne peut pas propager ses events au canvas WebGL directement,
+// donc on les envoie via postMessage pour que CSS3DScreen les reçoive.
+;['mousemove', 'mousedown', 'mouseup'].forEach((type) => {
   window.addEventListener(type, (e) => {
-    window.parent?.postMessage({ type, key: e.key }, window.location.origin)
+    window.parent?.postMessage({ type, clientX: e.clientX, clientY: e.clientY }, '*')
   })
 })
-
-// Machine modeste → effets CSS coûteux désactivés (voir win95.css)
-if (IS_LOW_END) document.documentElement.dataset.perf = 'low'
+;['keydown', 'keyup'].forEach((type) => {
+  window.addEventListener(type, (e) => {
+    window.parent?.postMessage({ type, key: e.key }, '*')
+  })
+})
 
 const style = document.createElement('style')
 style.textContent = `

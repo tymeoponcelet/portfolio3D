@@ -1,9 +1,9 @@
 // src/components/OS/Taskbar.jsx
 // Taskbar style Henry Heffernan (Toolbar.tsx)
-//   • Bouton Démarrer : windowsStartIcon.webp + texte
+//   • Bouton Démarrer : windowsStartIcon.png + texte
 //   • Menu Démarrer : sidebar "PonceletOS" + items
 //   • Tabs fenêtres : icône emoji + nom tronqué, état actif = checkerboard
-//   • Tray : volumeOn.webp + heure AM/PM
+//   • Tray : volumeOn.png + heure AM/PM
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { AnimatePresence, motion }                  from 'framer-motion'

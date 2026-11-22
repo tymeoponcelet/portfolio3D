@@ -103,8 +103,6 @@ export function OS() {
       () => ({ transform: 'none', filter: `hue-rotate(${Math.random() > 0.5 ? 10 : -10}deg) saturate(1.25)` }),
       () => ({ transform: `translateX(${(Math.random() - 0.5) * 4}px)`, filter: 'brightness(1.07)' }),
     ]
-    // PC modeste : pas de glitch (un `filter` sur tout l'OS = re-rendu complet)
-    if (document.documentElement.dataset.perf === 'low') return
     const schedule = () => {
       tid = setTimeout(() => {
         const el = crtRef.current

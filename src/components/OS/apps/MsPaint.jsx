@@ -177,7 +177,7 @@ export function MsPaint({ initialFileId }) {
     const canvas  = canvasRef.current
     const dataUrl = canvas.toDataURL('image/png')
     const stamp   = new Date().toLocaleTimeString('fr', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/:/g, 'h')
-    const id      = createItem('image', null, { x: 80, y: 170 }, `dessin_${stamp}.webp`)
+    const id      = createItem('image', null, { x: 80, y: 170 }, `dessin_${stamp}.png`)
     updateContent(id, dataUrl)
   }, [createItem, updateContent])
 

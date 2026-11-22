@@ -1,11 +1,10 @@
 // src/hooks/useDevicePixelRatio.js
-import { IS_LOW_END } from '../utils/perf'
 
 // Not a stateful hook — reads DPR synchronously at mount.
-// Le coût GPU croît avec le carré du DPR : DPR 2 = 4× plus de pixels à
-// calculer qu'en DPR 1. On plafonne donc à 1.5 (net, et ~45 % de pixels en
-// moins qu'à 2), et à 1 sur les machines modestes.
+// DPR changes during a session are impractical for a portfolio use case.
+// If reactivity is needed, add a matchMedia 'change' listener + useState.
 export function useDevicePixelRatio() {
+  const isMobile = window.matchMedia('(pointer: coarse)').matches
   const dpr = window.devicePixelRatio ?? 1
-  return IS_LOW_END ? 1 : Math.min(1.5, dpr)
+  return isMobile ? Math.min(1.5, dpr) : Math.min(2, dpr)
 }

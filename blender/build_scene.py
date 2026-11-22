@@ -111,6 +111,7 @@ def main():
     props.make_floppy_stack(prps)
     props.make_cassette_stack(prps)
     props.make_cd_stack(prps)
+    props.make_cat(prps)
     props.make_mug(prps)
     props.make_notebook(prps)
     props.make_cables(prps)

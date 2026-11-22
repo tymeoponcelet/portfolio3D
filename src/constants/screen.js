@@ -12,6 +12,9 @@ export const SCREEN_WORLD_H = 2.21 * 0.1   // 0.221 m en world space (scale=0.1)
 export const DOM_W = 640
 export const DOM_H = Math.round(DOM_W * SCREEN_WORLD_H / SCREEN_WORLD_W)  // 462
 
-export const PC_MODEL_SCALE = 0.1
+export const PC_MODEL_SCALE = 0.1   // portée par le nœud racine de models/room/computer.glb
+
+// Nom du mesh-écran du Commodore (CSS3DScreen s'y aligne) — cf. blender/common.py
+export const SCREEN_MESH_NAME = 'Object_19'
 
 export const DEBUG_HIGHLIGHT_SCREEN = false

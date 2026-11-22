@@ -199,6 +199,33 @@ def make_cassette_stack(col):
     return ob
 
 
+def make_cat(col):
+    """Chat gris tigré roulé en boule, endormi sous la lampe (côté gauche).
+    Origine au centre-bas : le site anime sa respiration (échelle Y)."""
+    p = Part("cat")
+    fur = M.tabby("cat_fur")
+    pale = M.solid("cat_pale", "#c9c6bf", 0.9)
+    pink = M.solid("cat_nose", "#c98a8a", 0.6)
+    p.sphere((0.0, 0.060, 0.0), 1.0, fur, segs=28, scale=(0.165, 0.062, 0.12))      # corps
+    p.sphere((0.06, 0.070, -0.02), 1.0, fur, segs=24, scale=(0.09, 0.06, 0.085))    # arrière-train
+    head = Vector((-0.115, 0.062, 0.055))
+    p.sphere(head, 1.0, fur, segs=24, scale=(0.06, 0.05, 0.055))                    # tête posée
+    p.sphere(head + Vector((-0.035, -0.015, 0.03)), 1.0, pale, segs=12, scale=(0.028, 0.02, 0.022))  # museau
+    p.sphere(head + Vector((-0.05, -0.006, 0.042)), 0.006, pink, segs=8)            # nez
+    for dz in (-0.028, 0.022):                                                      # oreilles
+        base = head + Vector((0.005, 0.035, dz))
+        p.cyl_between(base, base + Vector((-0.004, 0.035, dz * 0.25)), 0.017, fur, segs=4, r_end=0.002)
+    # queue qui fait le tour par l'avant
+    pts = [Vector((0.15 * math.cos(a), 0.022, 0.115 * math.sin(a) + 0.005))
+           for a in [math.radians(d) for d in range(-20, 150, 17)]]
+    for a, b in zip(pts, pts[1:]):
+        p.cyl_between(a, b, 0.019, fur, segs=10)
+        p.sphere(b, 0.019, fur, segs=10)
+    ob = p.finish(col, rot_y=150)     # tête tournée vers l'ordinateur et la caméra
+    ob.location = (ob.location.x - 0.76, ob.location.y - 0.12, ob.location.z)   # site (-0.76, 0, 0.12)
+    return ob
+
+
 def make_cd_stack(col):
     p = Part("cd_stack")
     case = M.solid("cd_case", "#2c2c30", 0.2)
@@ -208,7 +235,7 @@ def make_cd_stack(col):
         p.box((0, y, 0), (0.142, 0.010, 0.125), case, 0.0015, rot_y=a)
         p.box((0.005, y + 0.0052, 0), (0.12, 0.0005, 0.118), M.solid(f"cd_art_{c}", c, 0.5), 0.0, rot_y=a)
     ob = p.finish(col, rot_y=-15)
-    ob.location = (ob.location.x - 0.80, ob.location.y - 0.16, ob.location.z)  # site (-0.80, 0, 0.16)
+    ob.location = (ob.location.x + 0.65, ob.location.y + 0.13, ob.location.z)  # site (0.65, 0, -0.13) : à droite (le chat dort à gauche)
     return ob
 
 

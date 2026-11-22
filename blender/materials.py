@@ -90,6 +90,23 @@ def noisy(name, c1, c2, scale=120.0, rough=0.95):
     return _two_tone(name, c1, c2, rough, fac)
 
 
+def tabby(name, light="#9a9893", dark="#55524e", scale=16.0):
+    """Pelage tigré : rayures ondulées (Wave + distorsion)."""
+    def fac(nt):
+        w = nt.nodes.new("ShaderNodeTexWave")
+        w.wave_type = "BANDS"; w.bands_direction = "X"
+        w.inputs["Scale"].default_value = scale
+        w.inputs["Distortion"].default_value = 11.0
+        w.inputs["Detail"].default_value = 4.0
+        ramp = nt.nodes.new("ShaderNodeValToRGB")
+        ramp.color_ramp.elements[0].position = 0.45
+        ramp.color_ramp.elements[1].position = 0.65
+        nt.links.new(_coords(nt), w.inputs["Vector"])
+        nt.links.new(w.outputs["Fac"], ramp.inputs["Fac"])
+        return ramp.outputs["Color"]
+    return _two_tone(name, light, dark, 0.9, fac)
+
+
 def checker(name, c1, c2, scale=12.0):
     """Housse de couette à carreaux."""
     def fac(nt):

@@ -4,7 +4,8 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { CameraControls } from '@react-three/drei'
 import { VintagePC } from './VintagePC'
 import { Moon } from './Moon'
-import { Room } from './Room'
+import { BakedModel, Props } from './BakedModel'
+import { preloadBaked } from './bakedAssets'
 import { LoadingScreen } from './LoadingScreen'
 import { useWindowStore } from '../../stores/windowStore'
 import { useNightAudio } from '../../hooks/useNightAudio'
@@ -169,6 +170,8 @@ const CameraRig = forwardRef(function CameraRig({ ccRef }, ref) {
   return null
 })
 
+preloadBaked('room', 'props', 'computer')
+
 // ── Scene ─────────────────────────────────────────────────────────
 export function Scene() {
   const cameraControlsRef = useRef(null)
@@ -307,20 +310,13 @@ export function Scene() {
         dpr={dpr}
         onCreated={handleCreated}
       >
-        {/* Ambiance nocturne — très sombre */}
-        <ambientLight intensity={0.022} color="#0a0d1f" />
-        {/* Clair de lune entrant par la fenêtre */}
-        <pointLight position={[-0.55, 1.65, -1.6]} intensity={0.15} color="#b8ceff" distance={6} decay={1.5} />
-        {/* Halo CRT — source principale dans la pièce */}
-        <pointLight position={[-0.03, 0.15, 0.5]} intensity={0.25} color="#44aaff" distance={1.2} />
-
-        {/* ── Lune + cadre fenêtre + sol ── */}
+        {/* Aucune lumière : tout l'éclairage (lune, lampe, lueur de l'écran)
+            est cuit dans les atlas par Blender — voir BakedModel.jsx. */}
         <Suspense fallback={null}>
           <Moon />
+          <BakedModel name="room" />
+          <Props />
         </Suspense>
-
-        {/* ── Chambre + bureau ── */}
-        <Room />
 
         <Suspense fallback={null}>
           <VintagePC

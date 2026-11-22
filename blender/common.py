@@ -40,7 +40,7 @@ ROOM_OBJECTS = ["floor", "ceiling", "wall_back", "wall_left", "wall_right",
                 "window_frame", "window_glass", "desk", "chair", "bed", "shelf",
                 "wall_shelf", "trash_bin"]
 PROP_OBJECTS = ["desk_lamp", "radio_clock", "floppy_stack", "cassette_stack",
-                "cd_stack", "mug", "notebook", "cables", "books_shelf",
+                "cd_stack", "mug", "cat", "notebook", "cables", "books_shelf",
                 "books_wall", "figurine_1", "figurine_2", "poster_1", "poster_2",
                 "poster_3"]
 

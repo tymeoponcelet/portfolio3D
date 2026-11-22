@@ -3,7 +3,7 @@
 // Chargement des groupes à éclairage pré-calculé (technique Henry Heffernan) :
 // glb Draco + atlas WebP où Blender a cuit toute la lumière (blender/run.ps1).
 // Affichage en MeshBasicMaterial : AUCUN calcul de lumière à l'exécution.
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 import * as THREE from 'three'
 import { useGLTF, useTexture } from '@react-three/drei'
 import { IS_LOW_END } from '../../utils/perf'
@@ -30,7 +30,9 @@ function setupAtlas(tex) {
 export function useBakedScene(name) {
   const gltf = useGLTF(bakedModelUrl(name), DRACO)
   const map  = useTexture(bakedAtlasUrl(name), setupAtlas)
-  useEffect(() => {
+  // useLayoutEffect : appliqué avant la première image affichée (sinon une
+  // image avec le matériau par défaut, noir faute de lumière)
+  useLayoutEffect(() => {
     const mat = new THREE.MeshBasicMaterial({ map, toneMapped: false })
     gltf.scene.traverse((o) => {
       if (o.isMesh) o.material = o.name.startsWith('window_glass') ? GLASS : mat

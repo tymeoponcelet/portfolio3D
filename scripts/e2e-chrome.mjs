@@ -21,6 +21,7 @@ const HEADFUL   = flag('--headful')
 const SHOT      = opt('--shot')
 const EXPECT_1K = flag('--expect-1k')
 const MIN_FPS   = opt('--min-fps') ? Number(opt('--min-fps')) : null
+const OV_SHOT   = opt('--overview-shot')
 const BAKED     = flag('--baked')   // exige 0 lumière temps réel et ≤ 1 matériau éclairé
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
 const PORT = 9333, W = 1400, H = 900
@@ -94,6 +95,11 @@ async function run() {
       const f = () => { n++; performance.now() - t0 < 3000 ? requestAnimationFrame(f) : r(n / ((performance.now() - t0) / 1000)) };
       requestAnimationFrame(f) })`)
     await waitFor(`document.body.innerText.includes('Survolez le moniteur')`, 'fin de l\'intro')
+    if (OV_SHOT) {                       // capture de la vue d'ensemble
+      await sleep(500)
+      const s = await send('Page.captureScreenshot', { format: 'png' })
+      writeFileSync(OV_SHOT, Buffer.from(s.result.data, 'base64'))
+    }
 
     // Coût de rendu (ce qui pèse sur un PC modeste) — exige ?e2e dans l'URL
     // lights = lumières temps réel ; lit = matériaux qui calculent l'éclairage

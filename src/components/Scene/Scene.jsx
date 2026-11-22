@@ -105,6 +105,59 @@ function IntroCam({ active, ccRef, onComplete }) {
   return null
 }
 
+// ── MouseFollowCam ────────────────────────────────────────────────
+// Technique Henry Heffernan (« desk keyframe ») : en vue d'ensemble, la
+// caméra glisse doucement vers la souris ; le point visé la suit deux fois
+// plus vite que la position → effet de flottement / parallaxe.
+// Amplitudes à l'échelle de la scène (caméra à ~1,5 m du bureau).
+const FOLLOW = {
+  pos: { x: 0.30, y: 0.12 },   // déplacement max de la caméra (m)
+  tgt: { x: 0.14, y: 0.06 },   // déplacement max du point visé (m)
+  posRate: 1.5,                // vitesse de rattrapage (1/s) — Henry : 0.025/image
+  tgtRate: 3.0,                //                                  Henry : 0.05/image
+}
+const _goalPos = new THREE.Vector3()
+const _goalTgt = new THREE.Vector3()
+
+function MouseFollowCam({ active, ccRef }) {
+  const { camera, invalidate } = useThree()
+  const mouse = useRef({ x: 0, y: 0 })     // -1..1, y vers le bas
+  const cur   = useRef(null)               // { pos, tgt } lissés
+  const reduceMotion = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  )
+
+  useEffect(() => {
+    const onMove = (e) => {
+      mouse.current.x = (e.clientX / window.innerWidth)  * 2 - 1
+      mouse.current.y = (e.clientY / window.innerHeight) * 2 - 1
+      invalidate()
+    }
+    window.addEventListener('pointermove', onMove)
+    return () => window.removeEventListener('pointermove', onMove)
+  }, [invalidate])
+
+  useFrame((_, delta) => {
+    if (!active) { cur.current = null; return }
+    const cc = ccRef.current
+    if (!cc) return
+    const { position: p, target: t } = CAMERA.overview
+    const m = reduceMotion.current ? { x: 0, y: 0 } : mouse.current
+    _goalPos.set(p[0] + m.x * FOLLOW.pos.x, p[1] - m.y * FOLLOW.pos.y, p[2])
+    _goalTgt.set(t[0] + m.x * FOLLOW.tgt.x, t[1] - m.y * FOLLOW.tgt.y, t[2])
+    if (!cur.current) cur.current = { pos: camera.position.clone(), tgt: new THREE.Vector3(...t) }
+    const dt = Math.min(delta, 0.1)        // pas de saut après un onglet en pause
+    cur.current.pos.lerp(_goalPos, 1 - Math.exp(-dt * FOLLOW.posRate))
+    cur.current.tgt.lerp(_goalTgt, 1 - Math.exp(-dt * FOLLOW.tgtRate))
+    const { pos, tgt } = cur.current
+    cc.setLookAt(pos.x, pos.y, pos.z, tgt.x, tgt.y, tgt.z, false)
+    // Tant que la caméra n'a pas rejoint la souris, on demande une image de plus
+    if (pos.distanceToSquared(_goalPos) > 1e-8 || tgt.distanceToSquared(_goalTgt) > 1e-8) invalidate()
+  })
+
+  return null
+}
+
 // ── CameraRig ─────────────────────────────────────────────────────
 // Anime la caméra le long d'une courbe de Bézier quadratique.
 // Le point de contrôle est surélevé de ARCH_HEIGHT pour éviter
@@ -267,9 +320,9 @@ export function Scene() {
   const dpr = useDevicePixelRatio()
 
   // ── handleCreated : initialise CameraControls à la position d'intro ─
-  const handleCreated = useCallback(({ gl, scene }) => {
+  const handleCreated = useCallback(({ gl, scene, camera }) => {
     // Accès pour le test e2e (scripts/e2e-chrome.mjs), uniquement avec ?e2e
-    if (new URLSearchParams(window.location.search).has('e2e')) window.__three = { gl, scene }
+    if (new URLSearchParams(window.location.search).has('e2e')) window.__three = { gl, scene, camera }
     gl.setClearColor('#000000', 1)
     gl.setClearAlpha(1)
     setTimeout(() => {
@@ -330,12 +383,17 @@ export function Scene() {
         {/* ── IntroCam : zoom d'entrée piloté via CameraControls ── */}
         <IntroCam active={introStarted} ccRef={cameraControlsRef} onComplete={handleIntroDone} />
 
+        {/* ── MouseFollowCam : la caméra suit la souris en vue d'ensemble ── */}
+        <MouseFollowCam active={isReady && !isFocused && !isAnimating && !isIntro} ccRef={cameraControlsRef} />
+
         {/* ── CameraRig : animation Bézier sans collision ── */}
         <CameraRig ref={cameraRigRef} ccRef={cameraControlsRef} />
 
+        {/* Piloté uniquement par le code (intro, zoom, suivi de la souris) :
+            l'orbite au clic-glisser tirerait la caméra contre le suivi. */}
         <CameraControls
           ref={cameraControlsRef}
-          enabled={!isFocused && !isAnimating && !isIntro}
+          enabled={false}
           makeDefault
           smoothTime={TRANSITION_DURATION}
           draggingSmoothTime={0.08}

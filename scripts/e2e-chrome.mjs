@@ -22,6 +22,7 @@ const SHOT      = opt('--shot')
 const EXPECT_1K = flag('--expect-1k')
 const MIN_FPS   = opt('--min-fps') ? Number(opt('--min-fps')) : null
 const OV_SHOT   = opt('--overview-shot')
+const FOLLOW    = flag('--follow')   // la caméra suit la souris en vue d'ensemble
 const BAKED     = flag('--baked')   // exige 0 lumière temps réel et ≤ 1 matériau éclairé
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
 const PORT = 9333, W = 1400, H = 900
@@ -95,6 +96,15 @@ async function run() {
       const f = () => { n++; performance.now() - t0 < 3000 ? requestAnimationFrame(f) : r(n / ((performance.now() - t0) / 1000)) };
       requestAnimationFrame(f) })`)
     await waitFor(`document.body.innerText.includes('Survolez le moniteur')`, 'fin de l\'intro')
+    let follow = null
+    if (FOLLOW) {
+      const camX = () => evaluate('window.__three?.camera.position.x')
+      await mouse('mouseMoved', W - 5, H - 40); await sleep(2500)
+      const right = await camX()
+      await mouse('mouseMoved', 5, H - 40); await sleep(2500)
+      const left = await camX()
+      follow = { left, right }
+    }
     if (OV_SHOT) {                       // capture de la vue d'ensemble
       await sleep(500)
       const s = await send('Page.captureScreenshot', { format: 'png' })
@@ -158,6 +168,8 @@ async function run() {
     if (cdn.length) fails.push('requête CDN : ' + cdn[0])
     if (EXPECT_1K && !requests.some((u) => /_1k\.(webp|jpg|png)/.test(u))) fails.push('aucun atlas _1k chargé')
     if (MIN_FPS != null && fps < MIN_FPS) fails.push(`FPS ${fps.toFixed(1)} < ${MIN_FPS}`)
+    if (FOLLOW && !(follow && follow.right > 0.1 && follow.left < -0.1))
+      fails.push(`la caméra ne suit pas la souris (${JSON.stringify(follow)})`)
     if (BAKED) {
       if (!cost) fails.push('métriques indisponibles (ajouter ?e2e à l\'URL)')
       else {

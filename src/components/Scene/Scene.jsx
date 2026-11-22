@@ -10,6 +10,7 @@ import { useWindowStore } from '../../stores/windowStore'
 import { useNightAudio } from '../../hooks/useNightAudio'
 import { useDevicePixelRatio } from '../../hooks/useDevicePixelRatio'
 import { AdaptiveRenderer } from './AdaptiveRenderer'
+import { IS_LOW_END } from '../../utils/perf'
 
 // ── Positions caméra ──────────────────────────────────────────────
 const CAMERA = {
@@ -296,10 +297,11 @@ export function Scene() {
 
       <LoadingScreen onStart={handleStart} />
 
+      {/* Pas de `shadows` : aucune lumière ne projette d'ombre, la shadow map
+          ne servait à rien. Antialiasing coupé sur les machines modestes. */}
       <Canvas
         camera={{ position: [0, 1.1, 4.2], fov: 50 }}
-        shadows
-        gl={{ antialias: true, alpha: true }}
+        gl={{ antialias: !IS_LOW_END, alpha: true, powerPreference: 'high-performance' }}
         dpr={dpr}
         onCreated={handleCreated}
       >
@@ -344,7 +346,14 @@ export function Scene() {
           maxPolarAngle={Math.PI / 2 - 0.02}
           minPolarAngle={0.05}
         />
-        <AdaptiveRenderer cameraControlsRef={cameraControlsRef} />
+        <AdaptiveRenderer
+          cameraControlsRef={cameraControlsRef}
+          mode={
+            (introStarted && isIntro) || isAnimating ? 'boost'
+              : isFocused ? 'paused'
+              : 'auto'
+          }
+        />
       </Canvas>
 
       {/* ── Hint ── */}

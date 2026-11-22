@@ -64,10 +64,13 @@ export function Window({
   isMaximized,
   rainbow,
 }) {
-  const {
-    closeWindow, minimizeWindow, maximizeWindow,
-    focusWindow, updatePosition,
-  } = useOSStore()
+  // Sélecteurs ciblés : `useOSStore()` sans sélecteur re-rendait TOUTES les
+  // fenêtres à chaque changement du store (focus, horloge, fond d'écran…).
+  const closeWindow    = useOSStore((s) => s.closeWindow)
+  const minimizeWindow = useOSStore((s) => s.minimizeWindow)
+  const maximizeWindow = useOSStore((s) => s.maximizeWindow)
+  const focusWindow    = useOSStore((s) => s.focusWindow)
+  const updatePosition = useOSStore((s) => s.updatePosition)
 
   const x = useMotionValue(position.x)
   const y = useMotionValue(position.y)
@@ -110,20 +113,38 @@ export function Window({
     setIsDragging(true)
     setWillChange('transform')
 
+    // La barre de titre doit rester attrapable : on borne la position pour
+    // qu'au moins 60 px de la fenêtre restent visibles (et jamais au-dessus
+    // du haut de l'écran ni sous la barre des tâches).
+    const winW  = windowRef.current?.offsetWidth ?? 200
+    const maxX  = window.innerWidth  - 60
+    const minX  = 60 - winW
+    const maxY  = window.innerHeight - 28 - 24
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
+
     const onMove = (ev) => {
-      x.set(originX + (ev.clientX - startX))
-      y.set(originY + (ev.clientY - startY))
+      x.set(clamp(originX + (ev.clientX - startX), minX, maxX))
+      y.set(clamp(originY + (ev.clientY - startY), 0,    maxY))
     }
+    let ended = false
     const onUp = () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup',   onUp)
+      if (ended) return
+      ended = true
+      window.removeEventListener('mousemove',     onMove)
+      window.removeEventListener('mouseup',       onUp)
+      window.removeEventListener('pointerup',     onUp)
+      window.removeEventListener('pointercancel', onUp)
       setIsDragging(false)
       setWillChange('auto')
       updatePosition(id, { x: x.get(), y: y.get() })
     }
 
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup',   onUp)
+    // mousemove/mouseup sur le window de l'iframe (events synthétiques
+    // envoyés par CSS3DScreen) ; pointerup/pointercancel en filet de sécurité.
+    window.addEventListener('mousemove',     onMove)
+    window.addEventListener('mouseup',       onUp)
+    window.addEventListener('pointerup',     onUp)
+    window.addEventListener('pointercancel', onUp)
   }, [isMaximized, x, y, id, updatePosition, setWillChange])
 
   /* ── Focus ────────────────────────────────────────────────────── */

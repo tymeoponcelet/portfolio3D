@@ -1,7 +1,11 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { optimizeGLTF } from '../../utils/optimizeGLTF'
+import { IS_LOW_END } from '../../utils/perf'
+
+const GLTF_OPTS = { maxTextureSize: IS_LOW_END ? 1024 : undefined }
 
 const MX     = -0.55
 const MY     =  1.65
@@ -12,6 +16,13 @@ export function Moon() {
   const glowRef     = useRef()
   const moonGltf    = useGLTF(`${import.meta.env.BASE_URL}models/moon.glb`)
   const fenetreGltf = useGLTF(`${import.meta.env.BASE_URL}models/fenetre.glb`)
+
+  // Avant le premier rendu : la vitre (transmission) doublait le coût de
+  // chaque image ; textures réduites sur les machines modestes.
+  useMemo(() => {
+    optimizeGLTF(fenetreGltf.scene, GLTF_OPTS)
+    optimizeGLTF(moonGltf.scene,    GLTF_OPTS)
+  }, [fenetreGltf.scene, moonGltf.scene])
 
   // Copie la map sur emissiveMap pour que la texture soit visible sans lumière externe
   useEffect(() => {

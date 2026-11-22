@@ -72,7 +72,7 @@ function createRoundedRectGeometry(w, h, r) {
 
 // ── Composant ─────────────────────────────────────────────────────
 export function CSS3DScreen({ screenMesh, isFocused, onScreenLeave }) {
-  const { gl, camera, scene } = useThree()
+  const { gl, camera, scene, invalidate } = useThree()
   const cssRenderer  = useRef(null)
   const cssScene     = useRef(new THREE.Scene())
   const cssObject    = useRef(null)
@@ -114,25 +114,24 @@ export function CSS3DScreen({ screenMesh, isFocused, onScreenLeave }) {
     iframe.style.border        = 'none'
     iframe.style.pointerEvents = 'none'
     iframe.id                  = 'computer-screen'
-    iframe.className           = 'jitter'   // micro-jitter CRT (Henry)
+    // Plus de classe `jitter` : l'animation infinie (< 0.25 px, invisible une
+    // fois l'écran mis à l'échelle) forçait le navigateur à recomposer en
+    // continu l'iframe 1280×906 transformée en 3D — coûteux sur petit GPU.
     iframe.title               = 'Portfolio OS'
 
-    // Forwarding événements souris/clavier (postMessage → parent)
+    // Forwarding clavier (postMessage iframe → parent) : permet à Échap de
+    // quitter l'écran même quand le focus clavier est dans l'OS.
     iframe.onload = () => {
       const handler = (event) => {
-        if (!event.data?.type) return
-        const type     = event.data.type
+        if (event.source !== iframe.contentWindow) return
+        const type = event.data?.type
+        if (type !== 'keydown' && type !== 'keyup') return
         const customEvt = new CustomEvent(type, { bubbles: true, cancelable: false })
         customEvt.inComputer = true
-        if (type === 'mousemove') {
-          const r = iframe.getBoundingClientRect()
-          customEvt.clientX = Math.round(event.data.clientX * (r.width  / SCREEN_DOM_W) + r.left)
-          customEvt.clientY = Math.round(event.data.clientY * (r.height / SCREEN_DOM_H) + r.top)
-        } else if (type === 'keydown' || type === 'keyup') {
-          customEvt.key = event.data.key
-        }
+        customEvt.key = event.data.key
         iframe.dispatchEvent(customEvt)
       }
+      if (msgHandler.current) window.removeEventListener('message', msgHandler.current)
       msgHandler.current = handler
       window.addEventListener('message', handler)
     }
@@ -234,19 +233,20 @@ export function CSS3DScreen({ screenMesh, isFocused, onScreenLeave }) {
     const onResize = () => {
       if (cssRenderer.current)
         cssRenderer.current.setSize(gl.domElement.offsetWidth, gl.domElement.offsetHeight)
+      invalidate()   // rendu en pause (mode écran) → redessiner une image
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [gl])
+  }, [gl, invalidate])
 
   // ── Interaction : forwarding d'événements parent → iframe ─────────
   // Chrome/Safari ne délivrent PAS les événements souris à une iframe
   // placée sous une transformation CSS matrix3d (le rendu CSS3D). Seul
   // Firefox le fait → d'où « tout ne marche que sur Firefox ».
-  // Solution (technique Henry Heffernan) : le canvas reçoit le pointeur
-  // réel, on raycaste le mesh-écran, on convertit le point d'impact en
-  // coordonnées pixel de l'iframe, et on redispatche des événements
-  // synthétiques DANS l'iframe. Marche dans tous les navigateurs.
+  // Solution : le canvas reçoit le pointeur réel, on intersecte le rayon
+  // caméra avec le plan de l'iframe, on convertit le point en coordonnées
+  // pixel de l'iframe, et on redispatche des événements synthétiques DANS
+  // l'iframe (+ capture du pointeur, focus clavier, survol, clic droit).
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
@@ -259,101 +259,204 @@ export function CSS3DScreen({ screenMesh, isFocused, onScreenLeave }) {
 
     if (!isFocused || !screenMesh) return
 
+    const canvas    = gl.domElement
     const raycaster = new THREE.Raycaster()
     const ndc       = new THREE.Vector2()
     const S         = CSS3D_SCALE * CSS3D_SCALE_BOOST
+    // Zone réellement visible (la vitre) : le HTML déborde de 10 % sous le cadre.
+    const HALF_VIS_W = SCREEN_DOM_W / 2 / CSS3D_SCALE_BOOST
+    const HALF_VIS_H = SCREEN_DOM_H / 2 / CSS3D_SCALE_BOOST
 
-    // Point écran (client px du canvas) → pixel dans le DOM de l'iframe.
-    // On projette le point d'impact sur les axes droite/haut de l'écran
-    // (mêmes position/quaternion/échelle que ceux qui placent l'iframe via
-    // CSS3DRenderer) → alignement garanti avec ce que l'utilisateur voit.
+    // Le moniteur est statique : on calcule une fois le plan de l'iframe
+    // (même position/orientation que celles données au CSS3DObject).
+    screenMesh.updateWorldMatrix(true, false)
+    screenMesh.getWorldPosition(_hitPos)
+    screenMesh.getWorldQuaternion(_hitQuat)
+    _right.set(1, 0, 0).applyQuaternion(_hitQuat)
+    _upVec.set(0, 1, 0).applyQuaternion(_hitQuat)
+    const planeNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(_hitQuat)
+    const planeOrigin = _hitPos.clone().addScaledVector(planeNormal, CSS3D_PUSH_BACK)
+    const plane       = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, planeOrigin)
+    const hit         = new THREE.Vector3()
+
+    // Point écran (client px) → pixel dans le DOM de l'iframe.
+    // Intersection rayon/plan analytique au lieu d'un raycast sur le mesh
+    // (des milliers de triangles, 2 à 3 fois par mouvement de souris), et
+    // sur le plan EXACT où l'iframe est affichée → visée plus précise.
     const toIframePx = (clientX, clientY) => {
-      const rect = gl.domElement.getBoundingClientRect()
+      const rect = canvas.getBoundingClientRect()
       ndc.x =  ((clientX - rect.left) / rect.width)  * 2 - 1
       ndc.y = -((clientY - rect.top)  / rect.height) * 2 + 1
       raycaster.setFromCamera(ndc, camera)
-      const hits = raycaster.intersectObject(screenMesh, false)
-      if (!hits.length) return null
-      screenMesh.getWorldPosition(_hitPos)
-      screenMesh.getWorldQuaternion(_hitQuat)
-      _right.set(1, 0, 0).applyQuaternion(_hitQuat)
-      _upVec.set(0, 1, 0).applyQuaternion(_hitQuat)
-      _delta.copy(hits[0].point).sub(_hitPos)
-      const px = SCREEN_DOM_W / 2 + _delta.dot(_right) / S
-      const py = SCREEN_DOM_H / 2 - _delta.dot(_upVec) / S
-      return { px, py }
+      if (!raycaster.ray.intersectPlane(plane, hit)) return null
+      _delta.copy(hit).sub(planeOrigin)
+      const dx = _delta.dot(_right) / S
+      const dy = _delta.dot(_upVec) / S
+      return {
+        px: SCREEN_DOM_W / 2 + dx,
+        py: SCREEN_DOM_H / 2 - dy,
+        inside: Math.abs(dx) <= HALF_VIS_W && Math.abs(dy) <= HALF_VIS_H,
+      }
     }
 
-    // Redispatche un événement synthétique dans l'iframe à (px, py).
-    const fire = (type, px, py, buttons) => {
+    // Redispatche dans l'iframe, sur l'élément sous (px, py), une paire
+    // d'événements pointer* + mouse* (un seul elementFromPoint par paire).
+    let hoverTarget = null
+    const dispatch = (types, px, py, button, buttons, target) => {
       const doc = iframe.contentDocument
       const win = iframe.contentWindow
       if (!doc || !win) return null
-      const target    = doc.elementFromPoint(px, py) || doc.body
-      const isPointer = type[0] === 'p'
-      const Ctor      = isPointer ? (win.PointerEvent || win.MouseEvent) : win.MouseEvent
-      const init = {
+      const t = target || doc.elementFromPoint(px, py) || doc.body
+      const base = {
         bubbles: true, cancelable: true, composed: true,
         clientX: px, clientY: py, screenX: px, screenY: py,
-        view: win, button: 0, buttons: buttons ?? 0, detail: 1,
+        view: win, button, buttons, detail: 1,
       }
-      if (isPointer) { init.pointerId = 1; init.pointerType = 'mouse'; init.isPrimary = true }
-      target.dispatchEvent(new Ctor(type, init))
-      return target
+      for (const type of types) {
+        const isPointer = type.startsWith('pointer')
+        const Ctor = isPointer ? (win.PointerEvent || win.MouseEvent) : win.MouseEvent
+        const init = isPointer
+          ? { ...base, pointerId: 1, pointerType: 'mouse', isPrimary: true }
+          : base
+        t.dispatchEvent(new Ctor(type, init))
+      }
+      return t
     }
 
-    let down            = false
+    // Survol : mouseover/mouseout → onMouseEnter/onMouseLeave React marchent.
+    const updateHover = (t, px, py) => {
+      if (t === hoverTarget) return
+      const prev = hoverTarget
+      hoverTarget = t
+      const win = iframe.contentWindow
+      if (!win) return
+      const init = { bubbles: true, cancelable: true, composed: true,
+        clientX: px, clientY: py, view: win }
+      if (prev?.isConnected) {
+        prev.dispatchEvent(new (win.PointerEvent || win.MouseEvent)('pointerout', { ...init, relatedTarget: t, pointerId: 1, pointerType: 'mouse', isPrimary: true }))
+        prev.dispatchEvent(new win.MouseEvent('mouseout', { ...init, relatedTarget: t }))
+      }
+      if (t) {
+        t.dispatchEvent(new (win.PointerEvent || win.MouseEvent)('pointerover', { ...init, relatedTarget: prev, pointerId: 1, pointerType: 'mouse', isPrimary: true }))
+        t.dispatchEvent(new win.MouseEvent('mouseover', { ...init, relatedTarget: prev }))
+      }
+    }
+
+    // Les événements synthétiques ne donnent pas le focus : on le fait à la
+    // main, sinon impossible de taper dans un champ de l'OS (contact, bloc-notes…)
+    // et les raccourcis clavier de l'OS ne reçoivent rien.
+    const FOCUSABLE = 'input, textarea, select, button, a[href], [contenteditable=""], [contenteditable="true"], [tabindex]'
+    const focusTarget = (t) => {
+      const doc = iframe.contentDocument
+      const win = iframe.contentWindow
+      if (!doc || !win || !t) return
+      const f = t.closest?.(FOCUSABLE)
+      if (f && typeof f.focus === 'function') {
+        f.focus({ preventScroll: true })
+      } else {
+        if (doc.activeElement && doc.activeElement !== doc.body) doc.activeElement.blur()
+        win.focus()
+      }
+    }
+
+    let downButton      = -1     // -1 = aucun bouton enfoncé via l'écran
+    let last            = null   // dernière position valide (px iframe)
     let lastClickTime   = 0
     let lastClickTarget = null
+    let missFrames      = 0
+
+    const buttonsFor = (b) => (b === 2 ? 2 : b === 1 ? 4 : 1)
 
     const onDown = (e) => {
+      if (downButton !== -1) return
       const p = toIframePx(e.clientX, e.clientY)
-      if (!p) return
-      down = true
-      fire('pointerdown', p.px, p.py, 1)
-      fire('mousedown',   p.px, p.py, 1)
+      if (!p || !p.inside) return
+      // Empêche sélection de texte / drag natif dans la page parente : sur
+      // certains navigateurs (Safari, Chrome avec une sélection active), un
+      // drag natif démarrait et coupait le flux de pointermove → la fenêtre
+      // de l'OS ne bougeait plus.
+      e.preventDefault()
+      // Capture : on reçoit move/up même si le curseur sort du canvas ou
+      // de la fenêtre du navigateur pendant le glisser.
+      try { canvas.setPointerCapture(e.pointerId) } catch { /* ignore */ }
+
+      downButton = e.button
+      last = p
+      const t = dispatch(['pointerdown', 'mousedown'], p.px, p.py, e.button, buttonsFor(e.button))
+      focusTarget(t)
     }
+
     const onMove = (e) => {
       const p = toIframePx(e.clientX, e.clientY)
-      if (!p) return
-      fire('pointermove', p.px, p.py, down ? 1 : 0)
-      fire('mousemove',   p.px, p.py, down ? 1 : 0)
+      const dragging = downButton !== -1
+
+      // Dézoom si la souris s'éloigne franchement de l'écran
+      if (!p || !p.inside) {
+        if (!dragging && onScreenLeave && ++missFrames > 6) { onScreenLeave(); return }
+        if (!dragging || !p) return
+      } else {
+        missFrames = 0
+      }
+
+      // Pendant un glisser, on continue d'envoyer les mouvements même hors de
+      // la zone visible : la fenêtre suit le curseur jusqu'au bord.
+      last = p
+      const t = dispatch(['pointermove', 'mousemove'], p.px, p.py,
+        dragging ? downButton : 0, dragging ? buttonsFor(downButton) : 0)
+      if (!dragging) updateHover(t, p.px, p.py)
     }
-    const onUp = (e) => {
-      const p = toIframePx(e.clientX, e.clientY)
-      down = false
-      if (!p) return
-      fire('pointerup', p.px, p.py, 0)
-      fire('mouseup',   p.px, p.py, 0)
-      const clickTarget = fire('click', p.px, p.py, 0)
+
+    const release = (e, cancelled) => {
+      if (downButton === -1) return
+      const button = downButton
+      downButton = -1
+      try { canvas.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
+
+      const p  = cancelled ? null : toIframePx(e.clientX, e.clientY)
+      // Relâché hors de l'écran : on envoie quand même pointerup/mouseup à la
+      // dernière position connue — sinon le drag de fenêtre restait « collé ».
+      const pt = p ?? last
+      if (!pt) return
+      const t = dispatch(['pointerup', 'mouseup'], pt.px, pt.py, button, 0)
+
+      if (cancelled || button !== 0 || !p || !p.inside) return
+      dispatch(['click'], pt.px, pt.py, 0, 0, t)
       const now = performance.now()
-      if (now - lastClickTime < 400 && clickTarget === lastClickTarget) {
-        fire('dblclick', p.px, p.py, 0)
+      if (now - lastClickTime < 400 && t === lastClickTarget) {
+        dispatch(['dblclick'], pt.px, pt.py, 0, 0, t)
         lastClickTime = 0; lastClickTarget = null
       } else {
-        lastClickTime = now; lastClickTarget = clickTarget
+        lastClickTime = now; lastClickTarget = t
       }
     }
+    const onUp     = (e) => release(e, false)
+    const onCancel = (e) => release(e, true)
 
-    // Dézoom si la souris s'éloigne franchement de l'écran (raycast raté).
-    let missFrames = 0
-    const onLeaveCheck = (e) => {
-      if (!onScreenLeave || down) return
-      if (toIframePx(e.clientX, e.clientY)) { missFrames = 0; return }
-      if (++missFrames > 6) onScreenLeave()
+    // Clic droit → menus contextuels de l'OS (et pas celui du navigateur).
+    const onContextMenu = (e) => {
+      const p = toIframePx(e.clientX, e.clientY)
+      if (!p || !p.inside) return
+      e.preventDefault()
+      dispatch(['contextmenu'], p.px, p.py, 2, 2)
     }
 
-    const canvas = gl.domElement
-    canvas.addEventListener('pointerdown', onDown)
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup',   onUp)
-    window.addEventListener('mousemove',   onLeaveCheck)
+    canvas.addEventListener('pointerdown',  onDown)
+    canvas.addEventListener('contextmenu',  onContextMenu)
+    window.addEventListener('pointermove',  onMove)
+    window.addEventListener('pointerup',    onUp)
+    window.addEventListener('pointercancel', onCancel)
 
     return () => {
-      canvas.removeEventListener('pointerdown', onDown)
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup',   onUp)
-      window.removeEventListener('mousemove',   onLeaveCheck)
+      canvas.removeEventListener('pointerdown',  onDown)
+      canvas.removeEventListener('contextmenu',  onContextMenu)
+      window.removeEventListener('pointermove',  onMove)
+      window.removeEventListener('pointerup',    onUp)
+      window.removeEventListener('pointercancel', onCancel)
+      // Un glisser en cours ne doit pas rester bloqué dans l'OS
+      if (downButton !== -1 && last) dispatch(['pointerup', 'mouseup'], last.px, last.py, downButton, 0)
+      updateHover(null, 0, 0)
+      // Rend le clavier à la page parente (Échap, etc.)
+      if (document.activeElement === iframe) iframe.blur()
     }
   }, [isFocused, screenMesh, gl, camera, onScreenLeave])
 
@@ -369,8 +472,7 @@ export function CSS3DScreen({ screenMesh, isFocused, onScreenLeave }) {
     _normal.set(0, 0, 1).applyQuaternion(_quat)
 
     // CSS3DObject : reculé dans le modèle → le cadre plastique masque les bords HTML
-    const cssPos = _pos.clone().addScaledVector(_normal, CSS3D_PUSH_BACK)
-    cssObject.current.position.copy(cssPos)
+    cssObject.current.position.copy(_pos).addScaledVector(_normal, CSS3D_PUSH_BACK)
     cssObject.current.quaternion.copy(_quat)
 
     // Masque profondeur : calqué sur la worldMatrix exacte du mesh-écran
@@ -381,7 +483,7 @@ export function CSS3DScreen({ screenMesh, isFocused, onScreenLeave }) {
 
     // Occulteur arrondi : légèrement vers la caméra (perce le canvas alpha)
     if (occluder.current) {
-      occluder.current.position.copy(_pos.clone().addScaledVector(_normal, OCC_FRONT_Z))
+      occluder.current.position.copy(_pos).addScaledVector(_normal, OCC_FRONT_Z)
       occluder.current.quaternion.copy(_quat)
     }
 

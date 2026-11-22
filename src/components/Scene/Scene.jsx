@@ -264,7 +264,9 @@ export function Scene() {
   const dpr = useDevicePixelRatio()
 
   // ── handleCreated : initialise CameraControls à la position d'intro ─
-  const handleCreated = useCallback(({ gl }) => {
+  const handleCreated = useCallback(({ gl, scene }) => {
+    // Accès pour le test e2e (scripts/e2e-chrome.mjs), uniquement avec ?e2e
+    if (new URLSearchParams(window.location.search).has('e2e')) window.__three = { gl, scene }
     gl.setClearColor('#000000', 1)
     gl.setClearAlpha(1)
     setTimeout(() => {

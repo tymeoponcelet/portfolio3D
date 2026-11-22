@@ -39,7 +39,46 @@ def check_build():
         fail(f"{SCREEN_MESH} a bougé (matrix_world différente de la référence)")
 
 
-STAGES = {"build": [check_build]}
+def site_bbox(objs):
+    """Boîte englobante (repère site) d'une liste d'objets mesh."""
+    from mathutils import Vector
+    pts = [o.matrix_world @ Vector(c) for o in objs if o.type == "MESH" for c in o.bound_box]
+    if not pts:
+        return None
+    xs = [p.x for p in pts]; ys = [p.z for p in pts]; zs = [-p.y for p in pts]
+    return (min(xs), max(xs)), (min(ys), max(ys)), (min(zs), max(zs))
+
+
+def overlap(a, b, eps=0.002):
+    return all(a[i][0] < b[i][1] - eps and b[i][0] < a[i][1] - eps for i in range(3))
+
+
+def check_layout():
+    from common import (ROOM_OBJECTS, PROP_OBJECTS, FLOOR_Y, CEIL_Y, LEFT_X,
+                        RIGHT_X, BACK_Z, FRONT_Z)
+    names = {o.name for o in bpy.data.objects}
+    for n in ROOM_OBJECTS + PROP_OBJECTS:
+        if n not in names:
+            fail(f"objet « {n} » absent")
+    tol = 0.12   # épaisseur des murs, débords de plinthes
+    box = ((LEFT_X - tol, RIGHT_X + tol), (FLOOR_Y - tol, CEIL_Y + tol), (BACK_Z - tol, FRONT_Z + tol))
+    for key in ("room", "props"):
+        col = bpy.data.collections.get(GROUPS[key])
+        for o in (col.all_objects if col else []):
+            bb = site_bbox([o])
+            if bb and not all(box[i][0] <= bb[i][0] and bb[i][1] <= box[i][1] for i in range(3)):
+                fail(f"« {o.name} » sort de la pièce : {bb}")
+    pc = site_bbox([o for o in bpy.data.collections[GROUPS['computer']].all_objects]) \
+        if bpy.data.collections.get(GROUPS["computer"]) else None
+    props = bpy.data.collections.get(GROUPS["props"])
+    if pc and props:
+        for o in props.all_objects:
+            bb = site_bbox([o])
+            if bb and overlap(bb, pc):
+                fail(f"« {o.name} » chevauche le Commodore")
+
+
+STAGES = {"build": [check_build, check_layout]}
 
 
 def main():

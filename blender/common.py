@@ -27,6 +27,24 @@ SCREEN_MESH = "Object_19"     # mesh-écran utilisé par CSS3DScreen.jsx
 PC_ROOT = "pc_root"           # parent d'échelle PC_MODEL_SCALE
 
 
+# Pièce (repère site, mètres). Le bureau est collé au mur du fond ; le
+# Commodore (fixe, ne bouge pas) repose sur le plateau à y = 0.
+FLOOR_Y, CEIL_Y = -0.74, 1.90
+LEFT_X, RIGHT_X = -2.40, 2.40
+BACK_Z, FRONT_Z = -0.66, 2.60        # pas de mur avant (vue « diorama »)
+WINDOW = {"cx": -1.25, "bottom": 0.55, "scale": 0.5}   # fenetre.glb sur le mur du fond
+
+# Noms d'objets attendus (contrôlés par check_scene.py)
+ROOM_OBJECTS = ["floor", "ceiling", "wall_back", "wall_left", "wall_right",
+                "baseboard_back", "baseboard_left", "baseboard_right",
+                "window_frame", "window_glass", "desk", "chair", "bed", "shelf",
+                "wall_shelf", "trash_bin"]
+PROP_OBJECTS = ["desk_lamp", "radio_clock", "floppy_stack", "cassette_stack",
+                "cd_stack", "mug", "notebook", "cables", "books_shelf",
+                "books_wall", "figurine_1", "figurine_2", "poster_1", "poster_2",
+                "poster_3"]
+
+
 def site_to_bl(x, y, z):
     """Coordonnées du site (Y-up) -> Blender (Z-up)."""
     return (x, -z, y)

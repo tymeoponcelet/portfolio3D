@@ -38,6 +38,11 @@ def main():
     out = Path(args[args.index("--out") + 1]).resolve()
     prefix = args[args.index("--prefix") + 1] if "--prefix" in args else "preview"
     engine = args[args.index("--engine") + 1] if "--engine" in args else "eevee"
+    render_all(out, prefix, engine, layout_light="--layout-light" in args)
+
+
+def render_all(out, prefix, engine="eevee", layout_light=False):
+    out = Path(out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     sc = bpy.context.scene
     sc.render.engine = "CYCLES" if engine == "cycles" else "BLENDER_EEVEE"
@@ -47,7 +52,7 @@ def main():
     sc.render.resolution_x, sc.render.resolution_y = 1400, 900
     sc.render.resolution_percentage = 60
     sc.view_settings.view_transform = "Standard"
-    if "--layout-light" in args:
+    if layout_light:
         world = sc.world or bpy.data.worlds.new("w")
         sc.world = world
         world.use_nodes = True
@@ -62,4 +67,5 @@ def main():
         print("[preview]", sc.render.filepath)
 
 
-main()
+if __name__ == "__main__":
+    main()
